@@ -1,0 +1,50 @@
+name: Generar mapa SitRep
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "data/base_maestra_elnino.csv"
+      - "scripts/mapa_sitrep.py"
+      - "scripts/preparar_geografia.py"
+      - "requirements.txt"
+      - ".github/workflows/generar_mapa.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Preparar geografía
+        run: python scripts/preparar_geografia.py
+
+      - name: Generar mapa
+        run: python scripts/mapa_sitrep.py
+
+      - name: Guardar GeoPackage y mapas en el repositorio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/geografia/paises_americas.gpkg outputs/mapas/
+          if git diff --cached --quiet; then
+            echo "No hay cambios para guardar."
+          else
+            git commit -m "Actualizar GeoPackage y mapa del SitRep"
+            git push
+          fi
