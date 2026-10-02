@@ -1,12 +1,18 @@
 # Geografía
 
-El mapa espera el archivo:
+El archivo utilizado por el mapa es:
 
 `data/geografia/paises_americas.gpkg`
 
-Campos requeridos:
+Se genera automáticamente con `scripts/preparar_geografia.py` a partir de **Natural Earth Admin 0 Countries, escala 1:50m**.
 
+Campos principales:
+
+- `COUNTRY`: nombre del país o territorio.
 - `ISO_CC`: código ISO3 usado para unir la geometría con la base maestra.
-- `CONTINENT`: debe identificar al menos `North America` y `South America`.
+- `CONTINENT`: continente (`North America` o `South America`).
+- `geometry`: geometría del país/territorio en EPSG:4326.
 
-Para el mapa regional conviene usar una versión recortada a las Américas y simplificada, conservando todas las partes relevantes de cada país/territorio. El script reproyecta automáticamente la capa a EPSG:4326.
+El proceso conserva las geometrías multipartes disponibles en Natural Earth y filtra únicamente las Américas. El workflow de GitHub Actions vuelve a generar este GeoPackage antes de producir cada mapa.
+
+Natural Earth es un conjunto de datos cartográficos de dominio público.
