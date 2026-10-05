@@ -11,6 +11,7 @@ import importlib
 import inspect
 import json
 import sys
+import html
 
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
@@ -18,6 +19,9 @@ from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+import folium
+from folium.features import DivIcon
+from streamlit_folium import st_folium
 
 from scripts import mapa_sitrep as mapa_ref
 
@@ -148,6 +152,191 @@ def _props_popup(titulo, linea1="", linea2="", linea3=""):
         "tooltip_line2": str(linea2 or ""),
         "tooltip_line3": str(linea3 or ""),
     }
+
+
+
+def _construir_folium(frame_globals):
+    """Mapa Leaflet interactivo con hover por país, callouts e iconos SitRep."""
+    geo = frame_globals["geo"].copy()
+    actual = frame_globals["actual"].copy()
+    filtrado = frame_globals["filtrado"].copy()
+    hay_filtros = bool(frame_globals.get("hay_filtros", False))
+    seleccion = frame_globals.get("amenazas_mapa")
+    if seleccion is None:
+        seleccion = list(AMENAZAS.keys())
+
+    nombres_cortos = frame_globals.get("AMENAZAS_CORTAS", {})
+
+    cols = ["iso3", "pais", "prioridad", "situacion_predominante"]
+    cols += [v[0] for v in AMENAZAS.values()]
+    cols = [c for c in cols if c in actual.columns]
+    info = actual[cols].drop_duplicates("iso3")
+
+    mapa = geo[["COUNTRY", "ISO_CC", "geometry"]].copy()
+    mapa = mapa.merge(info, left_on="ISO_CC", right_on="iso3", how="left")
+    seleccionados = set(filtrado["iso3"].dropna().astype(str))
+
+    mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
+    if hay_filtros:
+        mask = mapa["iso3"].notna() & ~mapa["ISO_CC"].isin(seleccionados)
+        mapa.loc[mask, "prioridad_mapa"] = "Fuera del filtro"
+
+    def amenazas_texto(r):
+        activas = _amenazas_activas(r, list(AMENAZAS.keys()))
+        if not activas:
+            return "Sin amenazas / impactos priorizados"
+        return ", ".join(nombres_cortos.get(n, n) for n, _ in activas)
+
+    mapa["pais_popup"] = mapa["pais"].fillna(mapa["COUNTRY"]).astype(str)
+    mapa["prioridad_popup"] = mapa["prioridad_mapa"].astype(str)
+    mapa["amenazas_popup"] = mapa.apply(amenazas_texto, axis=1)
+
+    situacion = mapa["situacion_predominante"].fillna(
+        "Sin hallazgos priorizados en este SitRep"
+    ).astype(str)
+    mapa["situacion_popup"] = situacion.apply(
+        lambda s: s if len(s) <= 230 else s[:227].rstrip() + "..."
+    )
+    mapa["fill_hex"] = mapa["prioridad_mapa"].map(
+        lambda p: COLORES_PRIORIDAD.get(p, COLORES_PRIORIDAD["Sin priorización"])
+    )
+
+    # Sin teselas externas: océano uniforme y foco exclusivo en las Américas.
+    m = folium.Map(
+        location=[-12.0, -76.0],
+        zoom_start=3,
+        tiles=None,
+        min_zoom=2,
+        max_zoom=7,
+        min_lat=-62,
+        max_lat=35,
+        min_lon=-122,
+        max_lon=-30,
+        max_bounds=True,
+        world_copy_jump=False,
+        zoom_control=True,
+        control_scale=False,
+        prefer_canvas=False,
+    )
+    m.get_root().html.add_child(
+        folium.Element(
+            "<style>"
+            ".leaflet-container{background:#D9EEF7!important;}"
+            ".leaflet-tooltip.ops-tooltip{"
+            "background:white;border:1px solid #D9E6EE;border-radius:9px;"
+            "box-shadow:0 4px 16px rgba(0,0,0,.14);color:#17324D;"
+            "font-family:Arial,sans-serif;font-size:12px;padding:8px 10px;"
+            "max-width:360px;white-space:normal;line-height:1.35;}"
+            ".leaflet-tooltip.ops-tooltip:before{display:none;}"
+            "</style>"
+        )
+    )
+
+    geojson_data = json.loads(mapa.to_json())
+    capa_paises = folium.GeoJson(
+        data=geojson_data,
+        name="Países",
+        style_function=lambda feat: {
+            "fillColor": feat["properties"].get("fill_hex", "#BDBDBD"),
+            "color": "#FFFFFF",
+            "weight": 0.8,
+            "fillOpacity": 1.0,
+        },
+        highlight_function=lambda feat: {
+            "weight": 1.5,
+            "color": "#004B87",
+            "fillOpacity": 0.88,
+        },
+        smooth_factor=0.3,
+        tooltip=folium.GeoJsonTooltip(
+            fields=[
+                "pais_popup",
+                "prioridad_popup",
+                "amenazas_popup",
+                "situacion_popup",
+            ],
+            aliases=[
+                "<b>País:</b>",
+                "<b>Prioridad:</b>",
+                "<b>Amenazas / impactos:</b>",
+                "<b>Situación:</b>",
+            ],
+            localize=False,
+            sticky=True,
+            labels=True,
+            style=(
+                "background-color:white;color:#17324D;"
+                "font-family:Arial,sans-serif;font-size:12px;"
+                "padding:8px 10px;max-width:360px;white-space:normal;"
+            ),
+        ),
+    )
+    capa_paises.add_to(m)
+
+    # Callouts e iconos seleccionados. Se dibujan encima de los polígonos.
+    for _, fila in filtrado.iterrows():
+        iso = str(fila.get("iso3", "")).upper().strip()
+        if iso not in mapa_ref.LABELS or iso not in mapa_ref.ROUTES or iso not in mapa_ref.TARGET:
+            continue
+
+        x, y, nombre_pais = mapa_ref.LABELS[iso]
+        ruta = [(lat, lon) for lon, lat in mapa_ref.ROUTES[iso]]
+        target_lon, target_lat = mapa_ref.TARGET[iso]
+        activas = _amenazas_activas(fila, seleccion)
+
+        folium.PolyLine(
+            ruta,
+            color="#075594",
+            weight=1.15,
+            opacity=0.86,
+            interactive=False,
+        ).add_to(m)
+
+        folium.CircleMarker(
+            location=[target_lat, target_lon],
+            radius=1.35,
+            color="#075594",
+            fill=True,
+            fill_color="#075594",
+            fill_opacity=1,
+            weight=0,
+            interactive=False,
+        ).add_to(m)
+
+        imgs = "".join(
+            f'<img src="{_icono_data_uri(clave)}" '
+            f'style="width:27px;height:27px;object-fit:contain;margin-right:2px;vertical-align:middle;">'
+            for _, clave in activas
+        )
+        bloque_iconos = (
+            f'<div style="display:flex;gap:1px;align-items:center;margin-top:2px;">{imgs}</div>'
+            if imgs else ""
+        )
+        label_html = (
+            '<div style="white-space:nowrap;pointer-events:none;'
+            'font-family:Arial,sans-serif;color:#004B87;">'
+            f'<div style="font-size:12px;font-weight:700;line-height:1.05;">{html.escape(nombre_pais)}</div>'
+            f'{bloque_iconos}'
+            '</div>'
+        )
+
+        folium.Marker(
+            location=[y, x],
+            icon=DivIcon(
+                icon_size=(180, 52),
+                icon_anchor=(0, 13),
+                html=label_html,
+            ),
+            interactive=False,
+        ).add_to(m)
+
+    # Encuadre exacto: México completo hasta el extremo sur de Sudamérica.
+    m.fit_bounds(
+        [[-57.5, -119.0], [33.0, -31.5]],
+        padding_top_left=[10, 10],
+        padding_bottom_right=[10, 10],
+    )
+    return m
 
 
 def _construir_deck(frame_globals):
@@ -457,15 +646,16 @@ def _pyplot_interactivo(fig=None, *args, **kwargs):
         k in g for k in ("geo", "actual", "filtrado")
     ):
         try:
-            deck = _construir_deck(g)
-            return st.pydeck_chart(
-                deck,
+            mapa_folium = _construir_folium(g)
+            return st_folium(
+                mapa_folium,
                 use_container_width=True,
                 height=690,
-                key="mapa-regional-elnino",
+                returned_objects=[],
+                key="mapa-regional-elnino-folium",
             )
         except Exception as exc:
-            st.warning(f"No fue posible cargar la capa interactiva de amenazas: {exc}")
+            st.warning(f"No fue posible cargar el mapa interactivo: {exc}")
     return _ORIGINAL_PYPLOT(fig, *args, **kwargs)
 
 
