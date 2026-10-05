@@ -987,7 +987,7 @@ with st.container(border=True):
     # Una sola vista: prioridad por color + amenazas/impactos mediante callouts.
     modo_mapa = "Prioridad + amenazas"
     amenazas_mapa = st.multiselect(
-        "Iconos visibles",
+        "Seleccionar amenazas / impactos",
         list(AMENAZAS.keys()),
         default=list(AMENAZAS.keys()),
         format_func=lambda x: AMENAZAS_CORTAS[x],
