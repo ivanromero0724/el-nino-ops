@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Aplicación temporal del ajuste visual solicitado para el mapa del dashboard.
 p = Path("app.py")
 txt = p.read_text(encoding="utf-8")
 
