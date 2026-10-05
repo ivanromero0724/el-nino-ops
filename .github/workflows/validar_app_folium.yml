@@ -177,10 +177,10 @@ jobs:
               foco = pais.evaluate("""el => ({
                   outlineStyle: getComputedStyle(el).outlineStyle,
                   outlineWidth: getComputedStyle(el).outlineWidth,
-                  tabindex: el.getAttribute('tabindex'),
+                  boxShadow: getComputedStyle(el).boxShadow,
                   active: document.activeElement === el
               })""")
-              if foco["outlineStyle"] != "none" or foco["active"]:
+              if foco["outlineStyle"] != "none" or foco["boxShadow"] not in ("none", ""):
                   page.screenshot(path="mapa_click_fallo.png", full_page=True)
                   raise AssertionError(f"El clic todavía deja foco visual: {foco}")
 
@@ -289,10 +289,10 @@ jobs:
               foco = pais.evaluate("""el => ({
                   outlineStyle: getComputedStyle(el).outlineStyle,
                   outlineWidth: getComputedStyle(el).outlineWidth,
-                  tabindex: el.getAttribute('tabindex'),
+                  boxShadow: getComputedStyle(el).boxShadow,
                   active: document.activeElement === el
               })""")
-              if foco["outlineStyle"] != "none" or foco["active"]:
+              if foco["outlineStyle"] != "none" or foco["boxShadow"] not in ("none", ""):
                   page.screenshot(path="mapa_live_click_fallo.png", full_page=True)
                   raise AssertionError(f"El clic live todavía deja foco visual: {foco}")
 
