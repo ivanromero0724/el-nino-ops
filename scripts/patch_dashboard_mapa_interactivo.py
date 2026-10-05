@@ -169,5 +169,10 @@ legacy = legacy.replace(
     1,
 )
 
+# 6) Nombres resumidos más representativos para amenazas / impactos.
+legacy = legacy.replace('    "Sequía / agua": "Agua",', '    "Sequía / agua": "Sequía",')
+legacy = legacy.replace('    "Inundaciones / lluvias": "Lluvias",', '    "Inundaciones / lluvias": "Inundaciones",')
+legacy = legacy.replace('    "Inseguridad alimentaria": "Alimentos",', '    "Inseguridad alimentaria": "Inseguridad alimentaria",')
+
 p.write_text(legacy, encoding="utf-8")
-print("OK: leyendas alineadas y selector renombrado a Seleccionar amenazas / impactos")
+print("OK: selector y nombres resumidos de amenazas / impactos actualizados")
