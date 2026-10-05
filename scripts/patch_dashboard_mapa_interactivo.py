@@ -181,5 +181,19 @@ legacy = legacy.replace(
     1,
 )
 
+# 8) Dar más aire entre los rótulos de la matriz y los pictogramas.
+# El rótulo de "Inseguridad alimentaria" ocupa dos líneas, por lo que todos
+# los iconos se bajan a una misma línea base y se amplía el margen inferior.
+legacy = legacy.replace(
+    '        margin=dict(l=0, r=4, t=8, b=82),\n',
+    '        margin=dict(l=0, r=4, t=8, b=104),\n',
+    1,
+)
+legacy = legacy.replace(
+    '            x=(i + .5) / len(nombres), y=-.085,\n',
+    '            x=(i + .5) / len(nombres), y=-.145,\n',
+    1,
+)
+
 p.write_text(legacy, encoding="utf-8")
-print("OK: selector, nombres resumidos y salto de línea de inseguridad alimentaria actualizados")
+print("OK: matriz con rótulos e iconos separados y alineados")
