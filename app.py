@@ -268,7 +268,7 @@ def _construir_folium(frame_globals):
             style=(
                 "background-color:white;color:#17324D;"
                 "font-family:Arial,sans-serif;font-size:12px;"
-                "padding:8px 10px;max-width:360px;white-space:normal;"
+                "padding:8px 10px;min-width:300px;max-width:360px;white-space:normal;"
             ),
         ),
     )
