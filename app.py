@@ -1,7 +1,9 @@
-"""Entrada Streamlit.
+"""Entrada Streamlit para el dashboard de El Niño OPS/OMS.
 
-Conserva el dashboard original en ``app_legacy.py`` y reemplaza únicamente el
-render estático de "Prioridad + amenazas" por un mapa deck.gl interactivo.
+El dashboard visual original se conserva en ``app_legacy.py``. Esta entrada
+intercepta únicamente el render estático de "Prioridad + amenazas" y lo
+reemplaza por un mapa deck.gl interactivo con los mismos pictogramas del mapa
+SitRep PDF/PNG, callouts y tooltips al pasar el cursor.
 """
 
 from io import BytesIO
@@ -45,6 +47,7 @@ def _hex_rgba(valor, alpha=255):
 
 
 def _icono_data_uri(clave, size=66):
+    """Rasteriza en memoria exactamente el pictograma vectorial del SitRep."""
     cache = getattr(_icono_data_uri, "_cache", {})
     if clave in cache:
         return cache[clave]
@@ -71,14 +74,6 @@ def _icono_data_uri(clave, size=66):
     cache[clave] = uri
     _icono_data_uri._cache = cache
     return uri
-
-
-def _feature_point(position, **props):
-    return {
-        "type": "Feature",
-        "geometry": {"type": "Point", "coordinates": list(position)},
-        "properties": props,
-    }
 
 
 def _amenazas_activas(fila, seleccion):
@@ -120,7 +115,9 @@ def _construir_deck(frame_globals):
     mapa["tooltip_title"] = mapa["pais"].fillna(mapa["COUNTRY"])
     mapa["tooltip_line1"] = "Prioridad: " + mapa["prioridad_mapa"].astype(str)
     mapa["tooltip_line2"] = mapa.apply(lambda r: "Amenazas / impactos: " + amenazas_texto(r), axis=1)
-    mapa["tooltip_line3"] = mapa["situacion_predominante"].fillna("Sin hallazgos priorizados en este SitRep")
+    mapa["tooltip_line3"] = mapa["situacion_predominante"].fillna(
+        "Sin hallazgos priorizados en este SitRep"
+    )
     geojson = json.loads(mapa.to_json())
 
     rutas = []
@@ -132,6 +129,7 @@ def _construir_deck(frame_globals):
         iso = str(fila.get("iso3", "")).upper().strip()
         if iso not in mapa_ref.LABELS or iso not in mapa_ref.ROUTES or iso not in mapa_ref.TARGET:
             continue
+
         activas = _amenazas_activas(fila, seleccion)
         if not activas:
             continue
@@ -139,40 +137,54 @@ def _construir_deck(frame_globals):
         x, y, nombre_pais = mapa_ref.LABELS[iso]
         rutas.append({"path": [list(pt) for pt in mapa_ref.ROUTES[iso]]})
         anclas.append({"position": list(mapa_ref.TARGET[iso])})
-        etiquetas.append(
-            _feature_point(
-                (x, y),
-                pais=nombre_pais,
-                tooltip_title=nombre_pais,
-                tooltip_line1="Callout de amenazas / impactos",
-                tooltip_line2="Pasa el cursor sobre cada pictograma para ver su significado.",
-                tooltip_line3="",
-            )
-        )
+        etiquetas.append({
+            "position": [x, y],
+            "pais": nombre_pais,
+            "tooltip_title": nombre_pais,
+            "tooltip_line1": "Amenazas / impactos",
+            "tooltip_line2": "Pasa el cursor sobre los pictogramas para ver el detalle.",
+            "tooltip_line3": "",
+        })
 
         inicio_x = x + 1.0 + mapa_ref.DESPLAZAMIENTO_ICONOS_X.get(iso, 0)
         y_iconos = y + mapa_ref.DESPLAZAMIENTO_ICONOS_Y
         separacion = 2.45
         for i, (nombre, clave) in enumerate(activas):
-            iconos.append(
-                _feature_point(
-                    (inicio_x + i * separacion, y_iconos),
-                    icon={
-                        "url": _icono_data_uri(clave),
-                        "width": 76,
-                        "height": 76,
-                        "anchorX": 38,
-                        "anchorY": 38,
-                    },
-                    size=max(29, mapa_ref.TAMANOS_ICONOS.get(iso, 27) + 4),
-                    tooltip_title=nombre_pais,
-                    tooltip_line1=nombre,
-                    tooltip_line2="Amenaza / impacto reportado",
-                    tooltip_line3="",
-                )
-            )
+            iconos.append({
+                "position": [inicio_x + i * separacion, y_iconos],
+                "icon": {
+                    "url": _icono_data_uri(clave),
+                    "width": 76,
+                    "height": 76,
+                    "anchorX": 38,
+                    "anchorY": 38,
+                },
+                "size": max(29, mapa_ref.TAMANOS_ICONOS.get(iso, 27) + 4),
+                "tooltip_title": nombre_pais,
+                "tooltip_line1": nombre,
+                "tooltip_line2": "Amenaza / impacto reportado",
+                "tooltip_line3": "",
+            })
+
+    # Fondo azul propio. Así no dependemos de Mapbox, Carto ni de tokens externos.
+    fondo_oceano = [{
+        "polygon": [
+            [-180.0, -85.0],
+            [180.0, -85.0],
+            [180.0, 85.0],
+            [-180.0, 85.0],
+        ]
+    }]
 
     capas = [
+        pdk.Layer(
+            "PolygonLayer",
+            fondo_oceano,
+            get_polygon="polygon",
+            get_fill_color=[217, 238, 247, 255],
+            stroked=False,
+            pickable=False,
+        ),
         pdk.Layer(
             "GeoJsonLayer",
             geojson,
@@ -184,7 +196,7 @@ def _construir_deck(frame_globals):
             get_line_color=[255, 255, 255, 255],
             line_width_min_pixels=0.8,
             highlight_color=[255, 255, 255, 55],
-        )
+        ),
     ]
 
     if rutas:
@@ -215,8 +227,8 @@ def _construir_deck(frame_globals):
             pdk.Layer(
                 "TextLayer",
                 etiquetas,
-                get_position="geometry.coordinates",
-                get_text="properties.pais",
+                get_position="position",
+                get_text="pais",
                 get_color=[0, 62, 120, 255],
                 get_size=14,
                 size_units="pixels",
@@ -231,33 +243,28 @@ def _construir_deck(frame_globals):
             pdk.Layer(
                 "IconLayer",
                 iconos,
-                get_icon="properties.icon",
-                get_position="geometry.coordinates",
-                get_size="properties.size",
+                get_icon="icon",
+                get_position="position",
+                get_size="size",
                 size_units="pixels",
                 pickable=True,
             )
         )
 
-    estilo = {
-        "version": 8,
-        "sources": {},
-        "layers": [
-            {
-                "id": "background",
-                "type": "background",
-                "paint": {"background-color": AZUL_MAR},
-            }
-        ],
-    }
-    vista = pdk.ViewState(longitude=-76.0, latitude=-10.0, zoom=2.18, pitch=0, bearing=0)
+    vista = pdk.ViewState(
+        longitude=-76.0,
+        latitude=-10.0,
+        zoom=2.18,
+        pitch=0,
+        bearing=0,
+    )
     tooltip = {
         "html": (
             "<div style='font-family:Arial,sans-serif;max-width:340px'>"
-            "<b style='color:#004B87'>{properties.tooltip_title}</b><br>"
-            "{properties.tooltip_line1}<br>"
-            "{properties.tooltip_line2}<br>"
-            "<span style='color:#60788A'>{properties.tooltip_line3}</span>"
+            "<b style='color:#004B87'>{tooltip_title}</b><br>"
+            "{tooltip_line1}<br>"
+            "{tooltip_line2}<br>"
+            "<span style='color:#60788A'>{tooltip_line3}</span>"
             "</div>"
         ),
         "style": {
@@ -268,10 +275,18 @@ def _construir_deck(frame_globals):
             "borderRadius": "8px",
         },
     }
-    return pdk.Deck(layers=capas, initial_view_state=vista, map_style=estilo, tooltip=tooltip)
+
+    # map_style=None evita el error de pydeck/Streamlit Cloud que exige
+    # map_provider='mapbox' cuando se pasa un estilo como diccionario.
+    return pdk.Deck(
+        layers=capas,
+        initial_view_state=vista,
+        map_style=None,
+        tooltip=tooltip,
+    )
 
 
-# Streamlit conserva el módulo entre reruns; guardar la función original una sola vez.
+# Streamlit conserva el módulo entre reruns: guardar la función original una sola vez.
 if not hasattr(st, "_ops_original_pyplot"):
     st._ops_original_pyplot = st.pyplot
 _ORIGINAL_PYPLOT = st._ops_original_pyplot
