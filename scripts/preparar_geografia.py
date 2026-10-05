@@ -1,6 +1,7 @@
 from pathlib import Path
 from urllib.request import urlretrieve
 
+import pandas as pd
 import geopandas as gpd
 
 BASE = Path(__file__).resolve().parents[1]
@@ -26,6 +27,32 @@ def main():
         raise ValueError(f"Faltan campos en Natural Earth: {sorted(faltan)}")
 
     americas = mundo[mundo["CONTINENT"].isin(["North America", "South America"])].copy()
+
+    # Natural Earth incorpora Guayana Francesa dentro de la geometría de Francia,
+    # cuyo continente es Europa. Se extrae únicamente el componente sudamericano
+    # para que aparezca en los mapas regionales sin añadir Francia metropolitana.
+    francia = mundo[mundo["ADMIN"].astype(str).str.lower().eq("france")].copy()
+    if not francia.empty:
+        partes = francia[["geometry"]].explode(index_parts=False).reset_index(drop=True)
+        puntos = partes.geometry.representative_point()
+        guayana = partes[
+            puntos.x.between(-60, -45)
+            & puntos.y.between(0, 10)
+        ].copy()
+        if not guayana.empty:
+            fila = francia.iloc[[0]].copy()
+            fila["ADMIN"] = "Guayana Francesa"
+            fila["ISO_A3"] = "GUF"
+            fila["CONTINENT"] = "South America"
+            fila.geometry = [guayana.geometry.unary_union]
+            americas = gpd.GeoDataFrame(
+                pd.concat([americas, fila], ignore_index=True),
+                crs=mundo.crs,
+            )
+            print("Guayana Francesa incluida como GUF")
+        else:
+            print("⚠️ No se pudo aislar la geometría de Guayana Francesa")
+
     americas["ISO_CC"] = americas["ISO_A3"].astype(str)
 
     # Fallback para casos donde Natural Earth usa -99 en ISO_A3.
