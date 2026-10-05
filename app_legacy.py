@@ -800,7 +800,7 @@ def matriz_amenazas(datos, altura=560):
     )
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=4, t=8, b=82),
+        margin=dict(l=0, r=4, t=8, b=104),
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
@@ -810,7 +810,7 @@ def matriz_amenazas(datos, altura=560):
         fig.add_layout_image(dict(
             source=amenaza_icon_data_uri(nombre),
             xref="paper", yref="paper",
-            x=(i + .5) / len(nombres), y=-.085,
+            x=(i + .5) / len(nombres), y=-.145,
             sizex=.038, sizey=.038,
             xanchor="center", yanchor="middle", layer="above"
         ))
