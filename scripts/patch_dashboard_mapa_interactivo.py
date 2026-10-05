@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Trigger del parche interactivo solicitado.
 p = Path("app.py")
 txt = p.read_text(encoding="utf-8")
 
