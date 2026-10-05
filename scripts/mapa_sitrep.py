@@ -298,7 +298,7 @@ def main():
     salida_png=SALIDA_DIR/f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha}.png"
 
     fig=plt.figure(figsize=(13,8.5),facecolor="white")
-    ax=fig.add_axes([.020,.035,.620,.930]); ax_leg=fig.add_axes([.655,.225,.310,.715]); ax_logo=fig.add_axes([.680,.010,.300,.195])
+    ax=fig.add_axes([.020,.035,.620,.930]); ax_leg=fig.add_axes([.655,.225,.310,.715]); ax_logo=fig.add_axes([.650,.005,.340,.220])
     ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")
     ax.add_patch(Rectangle((-124,-58),94,90,facecolor=AZUL_MAR,edgecolor="none",zorder=0))
     americas.plot(ax=ax,color=GRIS_BASE,edgecolor=BLANCO,linewidth=.46,zorder=1)
@@ -336,7 +336,7 @@ def main():
     ax_logo.axis("off")
     if RUTA_LOGO:
         logo=np.asarray(recortar_logo(RUTA_LOGO))
-        ax_logo.add_artist(AnnotationBbox(OffsetImage(logo,zoom=.32),(.5,.48),xycoords=ax_logo.transAxes,frameon=False,box_alignment=(.5,.5)))
+        ax_logo.add_artist(AnnotationBbox(OffsetImage(logo,zoom=.50),(.5,.48),xycoords=ax_logo.transAxes,frameon=False,box_alignment=(.5,.5)))
 
     fig.savefig(salida_pdf,format="pdf",facecolor="white",bbox_inches="tight",pad_inches=.03)
     fig.savefig(salida_png,format="png",dpi=350,facecolor="white",bbox_inches="tight",pad_inches=.03)
