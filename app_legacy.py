@@ -50,10 +50,10 @@ AMENAZAS = {
 }
 
 AMENAZAS_CORTAS = {
-    "Sequía / agua": "Agua",
-    "Inundaciones / lluvias": "Lluvias",
+    "Sequía / agua": "Sequía",
+    "Inundaciones / lluvias": "Inundaciones",
     "Incendios / quemadas": "Incendios",
-    "Inseguridad alimentaria": "Alimentos",
+    "Inseguridad alimentaria": "Inseguridad alimentaria",
     "Dengue / otras arbovirosis": "Arbovirosis",
     "Calidad del aire / riesgo respiratorio": "Aire",
     "Afectación de servicios de salud": "Servicios",
