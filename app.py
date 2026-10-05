@@ -273,64 +273,32 @@ def _construir_folium(frame_globals):
 
     # Mantener hover, pero evitar cualquier efecto visual/acción al hacer clic
     # sobre un país (Leaflet/SVG puede dejar un rectángulo de foco azul).
-    nombre_capa_paises = capa_paises.get_name()
+    # Mantener hover, pero impedir que un clic enfoque/seleccione visualmente
+    # los polígonos SVG de Leaflet. Se usan listeners delegados para que funcione
+    # aunque los paths se creen después de ejecutar este script.
     m.get_root().script.add_child(
         folium.Element(
-            f"""
+            """
             <script>
-            (function() {{
-                var layerName = "{nombre_capa_paises}";
-                var intentos = 0;
+            (function() {
+                function esPaisLeaflet(el) {
+                    return !!(el && el.classList && el.classList.contains('leaflet-interactive'));
+                }
 
-                function instalarBloqueoClick() {{
-                    var capa = window[layerName];
-                    if (!capa) {{
-                        if (intentos++ < 80) {{
-                            setTimeout(instalarBloqueoClick, 50);
-                        }}
-                        return;
-                    }}
+                document.addEventListener('focusin', function(ev) {
+                    if (esPaisLeaflet(ev.target) && ev.target.blur) {
+                        ev.target.blur();
+                    }
+                }, true);
 
-                    capa.eachLayer(function(layer) {{
-                        if (!layer) return;
-
-                        // No hay ninguna acción Leaflet asociada al clic.
-                        layer.off('click');
-
-                        function prepararPath() {{
-                            var path = layer._path;
-                            if (!path) return;
-
-                            path.setAttribute('tabindex', '-1');
-                            path.style.outline = 'none';
-                            path.style.boxShadow = 'none';
-
-                            if (path.dataset.opsClickDisabled === '1') return;
-                            path.dataset.opsClickDisabled = '1';
-
-                            function quitarFoco(ev) {{
-                                if (ev) {{
-                                    ev.preventDefault();
-                                    ev.stopPropagation();
-                                }}
-                                setTimeout(function() {{
-                                    if (path && path.blur) path.blur();
-                                }}, 0);
-                            }}
-
-                            path.addEventListener('click', quitarFoco, true);
-                            path.addEventListener('mouseup', quitarFoco, true);
-                        }}
-
-                        prepararPath();
-                        layer.on('add', function() {{
-                            setTimeout(prepararPath, 0);
-                        }});
-                    }});
-                }}
-
-                setTimeout(instalarBloqueoClick, 0);
-            }})();
+                document.addEventListener('click', function(ev) {
+                    if (!esPaisLeaflet(ev.target)) return;
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    if (ev.stopImmediatePropagation) ev.stopImmediatePropagation();
+                    if (ev.target.blur) ev.target.blur();
+                }, true);
+            })();
             </script>
             """
         )
