@@ -4,3 +4,5 @@ matplotlib
 numpy
 Pillow
 pyogrio
+plotly
+streamlit
