@@ -218,6 +218,8 @@ def _construir_folium(frame_globals):
         zoom_control=True,
         control_scale=False,
         prefer_canvas=False,
+        zoom_snap=0.1,
+        zoom_delta=0.25,
     )
     m.get_root().html.add_child(
         folium.Element(
