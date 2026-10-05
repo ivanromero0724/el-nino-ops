@@ -162,5 +162,12 @@ if old_legend in legacy:
 elif 'filas_amenazas = []' not in legacy:
     raise RuntimeError('No se encontró el bloque lateral de leyendas para alinear')
 
+# 5) Etiqueta más clara para el selector de pictogramas del mapa.
+legacy = legacy.replace(
+    '        "Iconos visibles",\n',
+    '        "Seleccionar amenazas / impactos",\n',
+    1,
+)
+
 p.write_text(legacy, encoding="utf-8")
-print("OK: labels reducidos, hover restaurado y leyendas laterales alineadas")
+print("OK: leyendas alineadas y selector renombrado a Seleccionar amenazas / impactos")
