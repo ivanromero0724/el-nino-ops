@@ -129,7 +129,17 @@ st.markdown(
             color:{AZUL_OPS}; font-weight:800; font-size:.92rem;
             margin-bottom:.25rem;
         }}
-        .filter-note {{color:#728596; font-size:.78rem; margin-top:-.2rem;}}
+        .filter-note {{
+            color:#728596;
+            font-size:.78rem;
+            line-height:1.4;
+            margin-top:.35rem;
+            margin-bottom:.35rem;
+            padding:.55rem .75rem;
+            background:#F7FAFC;
+            border:1px solid #E6EEF3;
+            border-radius:9px;
+        }}
 
         .section-head {{margin:1.25rem 0 .55rem 0;}}
         .section-title {{
@@ -192,7 +202,17 @@ st.markdown(
             background:#F7FAFC; border:1px dashed #BFD4E1; border-radius:13px;
             padding:.95rem 1.05rem; color:#62798B; font-size:.87rem;
         }}
-        .caption-box {{font-size:.77rem; color:#6B7F90; line-height:1.45; margin-top:.6rem;}}
+        .caption-box {{
+            font-size:.77rem;
+            color:#6B7F90;
+            line-height:1.45;
+            margin-top:.85rem;
+            margin-bottom:.35rem;
+            padding:.62rem .78rem;
+            background:#F7FAFC;
+            border:1px solid #E6EEF3;
+            border-radius:9px;
+        }}
         div[data-testid="stSelectbox"], div[data-testid="stMultiSelect"] {{font-size:.9rem;}}
 
         @media (max-width: 900px) {{
