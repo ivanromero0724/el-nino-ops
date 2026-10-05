@@ -171,6 +171,19 @@ jobs:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"El popup todavía muestra Situación: {texto!r}")
 
+              # Al hacer clic en un país no debe aparecer el rectángulo azul
+              # de foco del SVG ni quedar el polígono enfocado.
+              pais.click(force=True)
+              foco = pais.evaluate("""el => ({
+                  outlineStyle: getComputedStyle(el).outlineStyle,
+                  outlineWidth: getComputedStyle(el).outlineWidth,
+                  tabindex: el.getAttribute('tabindex'),
+                  active: document.activeElement === el
+              })""")
+              if foco["outlineStyle"] != "none" or foco["active"] or foco["tabindex"] != "-1":
+                  page.screenshot(path="mapa_click_fallo.png", full_page=True)
+                  raise AssertionError(f"El clic todavía deja foco visual: {foco}")
+
               # Verificar que el encuadre visible contiene México y el extremo sur
               # de Sudamérica. Se toma la instancia Leaflet creada por Folium.
               bounds = folium_frame.evaluate("""() => {
@@ -272,6 +285,17 @@ jobs:
                   page.screenshot(path="mapa_live_fallo.png", full_page=True)
                   raise AssertionError(f"El popup live todavía muestra Situación: {texto!r}")
 
+              pais.click(force=True)
+              foco = pais.evaluate("""el => ({
+                  outlineStyle: getComputedStyle(el).outlineStyle,
+                  outlineWidth: getComputedStyle(el).outlineWidth,
+                  tabindex: el.getAttribute('tabindex'),
+                  active: document.activeElement === el
+              })""")
+              if foco["outlineStyle"] != "none" or foco["active"] or foco["tabindex"] != "-1":
+                  page.screenshot(path="mapa_live_click_fallo.png", full_page=True)
+                  raise AssertionError(f"El clic live todavía deja foco visual: {foco}")
+
               limites_navegacion = folium_frame.evaluate("""() => {
                   const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getBounds);
                   if (!key) return null;
@@ -300,6 +324,8 @@ jobs:
           path: |
             mapa_hover_ok.png
             mapa_hover_fallo.png
+            mapa_click_fallo.png
             mapa_live_ok.png
             mapa_live_fallo.png
+            mapa_live_click_fallo.png
           if-no-files-found: ignore
