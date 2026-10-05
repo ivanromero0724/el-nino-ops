@@ -69,6 +69,18 @@ jobs:
                   '    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")\n    ax.add_patch(Rectangle((-124,-58),94,90,facecolor=AZUL_MAR,edgecolor="none",zorder=0))'
               )
 
+          # Quitar las franjas blancas superior e inferior sin deformar el mapa:
+          # se extiende el mismo azul del océano detrás de toda la columna del mapa.
+          fondo_columna = '    fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))'
+          if fondo_columna not in txt:
+              txt = txt.replace(
+                  '    fig=plt.figure(figsize=(13,8.5),facecolor="white")\n',
+                  '    fig=plt.figure(figsize=(13,8.5),facecolor="white")\n' + fondo_columna + '\n'
+              )
+
+          # Sin padding externo para que no reaparezca una línea blanca al exportar.
+          txt = txt.replace('pad_inches=.03', 'pad_inches=0')
+
           # Logo OPS/OMS mucho más grande y con mayor área disponible.
           txt = txt.replace(
               'ax_logo=fig.add_axes([.735,.035,.165,.135])',
@@ -82,7 +94,7 @@ jobs:
           txt = txt.replace('OffsetImage(logo,zoom=.32)', 'OffsetImage(logo,zoom=.50)')
 
           p.write_text(txt, encoding="utf-8")
-          print("Estilo actualizado: océano azul + logo OPS/OMS mucho más grande")
+          print("Estilo actualizado: océano azul, sin bordes blancos y logo OPS/OMS grande")
           PY
 
       - name: Preparar geografía
@@ -99,6 +111,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
           else
-            git commit -m "Aumentar tamaño del logo OPS/OMS"
+            git commit -m "Eliminar bordes blancos del mapa"
             git push
           fi
