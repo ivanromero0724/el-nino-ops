@@ -1,4 +1,6 @@
 from pathlib import Path
+import base64
+import html
 import json
 
 import numpy as np
@@ -22,7 +24,7 @@ AZUL_SEC = "#0072CE"
 AZUL_MAR = "#D9EEF7"
 TEXTO = "#17324D"
 GRIS = "#CACACA"
-GRIS_CLARO = "#F4F8FA"
+GRIS_CLARO = "#F5F8FA"
 BORDE = "#D9E6EE"
 
 COLORES_PRIORIDAD = {
@@ -30,6 +32,7 @@ COLORES_PRIORIDAD = {
     "Media": "#FF8618",
     "Baja": "#F6C344",
     "Sin priorización": "#BDBDBD",
+    "Fuera del filtro": "#E7EDF1",
 }
 ORDEN_PRIORIDAD = ["Alta", "Media", "Baja", "Sin priorización"]
 
@@ -43,19 +46,35 @@ AMENAZAS = {
     "Afectación de servicios de salud": ("icono_servicios", "✚"),
 }
 
+AMENAZAS_CORTAS = {
+    "Sequía / agua": "Agua",
+    "Inundaciones / lluvias": "Lluvias",
+    "Incendios / quemadas": "Incendios",
+    "Inseguridad alimentaria": "Alimentos",
+    "Dengue / otras arbovirosis": "Arbovirosis",
+    "Calidad del aire / riesgo respiratorio": "Aire",
+    "Afectación de servicios de salud": "Servicios",
+}
+
 CIFRAS = {
     "personas_afectadas": "Personas afectadas",
     "personas_damnificadas": "Personas damnificadas",
     "familias_afectadas": "Familias afectadas",
     "muertes": "Muertes",
     "heridos": "Heridos",
-    "personas_inseguridad_alimentaria_min": "Personas con inseguridad alimentaria (mín.)",
-    "personas_inseguridad_alimentaria_max": "Personas con inseguridad alimentaria (máx.)",
-    "personas_emergencia_alimentaria": "Personas en emergencia alimentaria",
-    "establecimientos_salud_afectados": "Establecimientos de salud afectados",
-    "establecimientos_salud_expuestos": "Establecimientos de salud expuestos",
-    "hectareas_incendios": "Hectáreas afectadas por incendios",
+    "personas_inseguridad_alimentaria_min": "Inseguridad alimentaria (mín.)",
+    "personas_inseguridad_alimentaria_max": "Inseguridad alimentaria (máx.)",
+    "personas_emergencia_alimentaria": "Emergencia alimentaria",
+    "establecimientos_salud_afectados": "Establecimientos afectados",
+    "establecimientos_salud_expuestos": "Establecimientos expuestos",
+    "hectareas_incendios": "Hectáreas por incendios",
     "municipios_afectados": "Municipios afectados",
+}
+
+CHART_CONFIG = {
+    "displayModeBar": False,
+    "scrollZoom": False,
+    "responsive": True,
 }
 
 st.set_page_config(
@@ -68,34 +87,117 @@ st.set_page_config(
 st.markdown(
     f"""
     <style>
-        .block-container {{padding-top: 1.1rem; padding-bottom: 2rem; max-width: 1500px;}}
-        h1, h2, h3 {{color: {AZUL_OPS};}}
+        :root {{ --ops-blue:{AZUL_OPS}; --ops-blue2:{AZUL_SEC}; --ops-border:{BORDE}; }}
+        .block-container {{
+            padding-top: .9rem;
+            padding-bottom: 2.2rem;
+            max-width: 1420px;
+        }}
+        h1, h2, h3 {{color:{AZUL_OPS};}}
+        [data-testid="stHeader"] {{background:rgba(255,255,255,.96);}}
+
+        .ops-hero {{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:2rem;
+            background:linear-gradient(105deg,#FFFFFF 0%,#FFFFFF 62%,#EEF8FC 100%);
+            border:1px solid {BORDE};
+            border-radius:18px;
+            padding:1.15rem 1.45rem;
+            box-shadow:0 4px 18px rgba(0,75,135,.07);
+            margin-bottom:.9rem;
+        }}
+        .ops-hero-copy {{min-width:0;}}
+        .ops-kicker {{
+            color:{AZUL_SEC}; font-weight:800; font-size:.76rem;
+            letter-spacing:.08em; text-transform:uppercase; margin-bottom:.28rem;
+        }}
+        .ops-title {{
+            color:{AZUL_OPS}; font-weight:800; font-size:2rem;
+            line-height:1.08; letter-spacing:-.025em; margin:0;
+        }}
+        .ops-subtitle {{
+            color:#5A7286; font-size:.94rem; margin-top:.42rem; line-height:1.45;
+        }}
+        .ops-logo {{width:220px; max-width:24vw; height:auto; display:block;}}
+
+        .filter-label {{
+            color:{AZUL_OPS}; font-weight:800; font-size:.92rem;
+            margin-bottom:.25rem;
+        }}
+        .filter-note {{color:#728596; font-size:.78rem; margin-top:-.2rem;}}
+
+        .section-head {{margin:1.25rem 0 .55rem 0;}}
+        .section-title {{
+            color:{AZUL_OPS}; font-weight:800; font-size:1.18rem;
+            letter-spacing:-.01em; line-height:1.2;
+        }}
+        .section-subtitle {{color:#728596; font-size:.82rem; margin-top:.12rem;}}
+
         div[data-testid="stMetric"] {{
-            background: white;
-            border: 1px solid {BORDE};
-            border-radius: 14px;
-            padding: 0.75rem 0.9rem;
-            box-shadow: 0 2px 8px rgba(0, 75, 135, 0.05);
+            background:#FFFFFF;
+            border:1px solid {BORDE};
+            border-radius:14px;
+            padding:.8rem .9rem;
+            box-shadow:0 2px 10px rgba(0,75,135,.045);
+            min-height:100px;
         }}
-        div[data-testid="stMetricLabel"] {{color: #51697D;}}
-        div[data-testid="stMetricValue"] {{color: {AZUL_OPS};}}
-        .ops-header {{
-            border-bottom: 3px solid {AZUL_SEC};
-            padding-bottom: 0.65rem;
-            margin-bottom: 0.9rem;
+        div[data-testid="stMetricLabel"] {{color:#5C7182; font-size:.78rem; line-height:1.2;}}
+        div[data-testid="stMetricValue"] {{color:{AZUL_OPS}; font-size:1.75rem; font-weight:800;}}
+
+        .summary-card {{
+            border:1px solid {BORDE}; background:#FFFFFF; border-radius:14px;
+            padding:.75rem .95rem; margin-bottom:.65rem;
         }}
-        .ops-kicker {{color: {AZUL_SEC}; font-weight: 700; font-size: 0.82rem; letter-spacing: .04em; text-transform: uppercase;}}
-        .ops-title {{color: {AZUL_OPS}; font-weight: 800; font-size: 2rem; line-height: 1.1; margin-top: .15rem;}}
-        .ops-subtitle {{color: #5A7286; font-size: .95rem; margin-top: .25rem;}}
-        .section-title {{color: {AZUL_OPS}; font-weight: 800; font-size: 1.15rem; margin: .5rem 0 .45rem 0;}}
-        .priority-pill {{display:inline-block; padding:.28rem .65rem; border-radius:999px; color:white; font-weight:700; font-size:.86rem;}}
-        .detail-card {{background:{GRIS_CLARO}; border:1px solid {BORDE}; border-radius:12px; padding:.85rem 1rem; min-height:138px;}}
-        .detail-card h4 {{color:{AZUL_OPS}; margin:0 0 .45rem 0; font-size:.95rem;}}
-        .detail-card p {{color:{TEXTO}; margin:0; font-size:.92rem; line-height:1.45;}}
-        .threat-row {{display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #E8F0F4; padding:.37rem 0; font-size:.9rem;}}
-        .threat-count {{font-weight:800; color:{AZUL_OPS};}}
-        .caption-box {{font-size:.79rem; color:#6B7F90;}}
-        div[data-testid="stSelectbox"], div[data-testid="stMultiSelect"] {{font-size:.92rem;}}
+        .summary-title {{
+            color:{AZUL_OPS}; font-size:.91rem; font-weight:800;
+            margin:0 0 .42rem 0;
+        }}
+        .threat-row {{
+            display:flex; justify-content:space-between; align-items:center; gap:.75rem;
+            border-bottom:1px solid #EAF0F4; padding:.35rem 0; font-size:.84rem;
+            color:{TEXTO};
+        }}
+        .threat-row:last-child {{border-bottom:none;}}
+        .threat-count {{font-weight:800; color:{AZUL_OPS}; min-width:1.5rem; text-align:right;}}
+
+        .country-summary {{
+            display:grid; grid-template-columns:minmax(180px,.8fr) 1.35fr 1fr;
+            gap:1rem; align-items:start; background:#F8FBFD;
+            border:1px solid {BORDE}; border-radius:14px; padding:1rem 1.05rem;
+            margin:.25rem 0 .75rem 0;
+        }}
+        .country-name {{color:{AZUL_OPS}; font-weight:800; font-size:1.32rem; margin-bottom:.45rem;}}
+        .summary-label {{color:#6C8192; font-size:.73rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; margin-bottom:.2rem;}}
+        .summary-text {{color:{TEXTO}; font-size:.9rem; line-height:1.4;}}
+        .priority-pill {{
+            display:inline-block; padding:.28rem .68rem; border-radius:999px;
+            color:white; font-weight:800; font-size:.8rem;
+        }}
+        .priority-pill.light {{color:#5D4B00;}}
+
+        .detail-card {{
+            background:#FFFFFF; border:1px solid {BORDE}; border-radius:14px;
+            padding:.95rem 1.05rem; min-height:158px; height:100%;
+            box-shadow:0 2px 9px rgba(0,75,135,.035);
+        }}
+        .detail-card h4 {{color:{AZUL_OPS}; margin:0 0 .48rem 0; font-size:.94rem;}}
+        .detail-card p {{color:{TEXTO}; margin:0; font-size:.88rem; line-height:1.48;}}
+
+        .empty-state {{
+            background:#F7FAFC; border:1px dashed #BFD4E1; border-radius:13px;
+            padding:.95rem 1.05rem; color:#62798B; font-size:.87rem;
+        }}
+        .caption-box {{font-size:.77rem; color:#6B7F90; line-height:1.45; margin-top:.6rem;}}
+        div[data-testid="stSelectbox"], div[data-testid="stMultiSelect"] {{font-size:.9rem;}}
+
+        @media (max-width: 900px) {{
+            .ops-hero {{padding:1rem; gap:1rem;}}
+            .ops-title {{font-size:1.55rem;}}
+            .ops-logo {{width:165px; max-width:32vw;}}
+            .country-summary {{grid-template-columns:1fr;}}
+        }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -144,6 +246,10 @@ def texto(valor, fallback="Sin información reportada"):
     return valor if valor and valor.lower() != "nan" else fallback
 
 
+def texto_html(valor, fallback="Sin información reportada"):
+    return html.escape(texto(valor, fallback)).replace("\n", "<br>")
+
+
 def formato_numero(valor):
     if pd.isna(valor):
         return None
@@ -168,16 +274,39 @@ def sitrep_etiqueta(fila):
     return f"SitRep {numero:02d} · {fecha}" if isinstance(numero, int) else f"SitRep {numero} · {fecha}"
 
 
-def construir_mapa(geo, datos):
+def section_header(titulo, subtitulo=None):
+    sub = f'<div class="section-subtitle">{html.escape(subtitulo)}</div>' if subtitulo else ""
+    st.markdown(
+        f'<div class="section-head"><div class="section-title">{html.escape(titulo)}</div>{sub}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def logo_data_uri():
+    if not RUTA_LOGO.exists():
+        return None
+    encoded = base64.b64encode(RUTA_LOGO.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+# ============================================================
+# GRÁFICOS
+# ============================================================
+def construir_mapa(geo, contexto, datos_filtrados, hay_filtros=False):
     mapa = geo[["COUNTRY", "ISO_CC", "geometry"]].copy()
     cols = ["iso3", "pais", "prioridad", "situacion_predominante", "impacto_salud_documentado"]
-    cols = [c for c in cols if c in datos.columns]
-    info = datos[cols].drop_duplicates("iso3")
+    cols = [c for c in cols if c in contexto.columns]
+    info = contexto[cols].drop_duplicates("iso3")
     mapa = mapa.merge(info, left_on="ISO_CC", right_on="iso3", how="left")
+
+    seleccionados = set(datos_filtrados["iso3"].dropna().astype(str))
     mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
+    if hay_filtros:
+        mask_fuera = mapa["iso3"].notna() & ~mapa["ISO_CC"].isin(seleccionados)
+        mapa.loc[mask_fuera, "prioridad_mapa"] = "Fuera del filtro"
+
     mapa["nombre_mapa"] = mapa["pais"].fillna(mapa["COUNTRY"])
     mapa["situacion_mapa"] = mapa["situacion_predominante"].fillna("Sin hallazgos priorizados en este SitRep")
-
     geojson = json.loads(mapa.to_json())
 
     fig = px.choropleth(
@@ -194,7 +323,7 @@ def construir_mapa(geo, datos):
         },
         labels={"prioridad_mapa": "Prioridad", "situacion_mapa": "Situación"},
         color_discrete_map=COLORES_PRIORIDAD,
-        category_orders={"prioridad_mapa": ORDEN_PRIORIDAD},
+        category_orders={"prioridad_mapa": ORDEN_PRIORIDAD + ["Fuera del filtro"]},
     )
 
     fig.update_geos(
@@ -204,30 +333,21 @@ def construir_mapa(geo, datos):
         showcoastlines=False,
         showcountries=True,
         countrycolor="white",
-        countrywidth=0.6,
+        countrywidth=0.65,
         showland=False,
         showocean=True,
         oceancolor=AZUL_MAR,
         bgcolor=AZUL_MAR,
         visible=False,
     )
-    fig.update_traces(marker_line_color="white", marker_line_width=0.65)
+    fig.update_traces(marker_line_color="white", marker_line_width=0.7)
     fig.update_layout(
-        height=680,
-        margin=dict(l=0, r=0, t=4, b=0),
-        paper_bgcolor="white",
+        height=590,
+        margin=dict(l=0, r=0, t=0, b=0),
+        paper_bgcolor=AZUL_MAR,
         plot_bgcolor=AZUL_MAR,
-        legend_title_text="Nivel de prioridad",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=0.01,
-            xanchor="left",
-            x=0.02,
-            bgcolor="rgba(255,255,255,.88)",
-            bordercolor=BORDE,
-            borderwidth=1,
-        ),
+        showlegend=False,
+        hoverlabel=dict(bgcolor="white", font_size=13, font_color=TEXTO),
     )
     return fig
 
@@ -240,27 +360,32 @@ def grafico_subregion(datos):
         .size()
         .reset_index(name="Países")
     )
+    orden_sub = (
+        datos.groupby("subregion", dropna=False).size().sort_values(ascending=True).index.tolist()
+    )
     fig = px.bar(
         t,
-        x="subregion",
-        y="Países",
+        y="subregion",
+        x="Países",
         color="prioridad",
+        orientation="h",
         color_discrete_map=COLORES_PRIORIDAD,
-        category_orders={"prioridad": ORDEN_PRIORIDAD},
+        category_orders={"prioridad": ORDEN_PRIORIDAD, "subregion": orden_sub},
         barmode="stack",
     )
     fig.update_layout(
-        height=330,
-        margin=dict(l=10, r=10, t=10, b=20),
+        height=max(320, 56 * max(1, len(orden_sub)) + 125),
+        margin=dict(l=0, r=8, t=8, b=70),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        legend_title_text="Prioridad",
-        xaxis_title=None,
-        yaxis_title="Países/territorios",
-        legend=dict(orientation="h", y=1.12, x=0),
+        legend_title_text="",
+        xaxis_title="Países/territorios",
+        yaxis_title=None,
+        bargap=.38,
+        legend=dict(orientation="h", yanchor="top", y=-.17, xanchor="left", x=0, font=dict(size=10)),
     )
-    fig.update_xaxes(tickangle=-15, showgrid=False)
-    fig.update_yaxes(gridcolor="#EAF0F4", rangemode="tozero", dtick=1)
+    fig.update_xaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero", zeroline=False)
+    fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
     return fig
 
 
@@ -269,9 +394,18 @@ def matriz_amenazas(datos):
         return go.Figure()
 
     columnas = [v[0] for v in AMENAZAS.values()]
-    etiquetas = [f"{icono} {nombre}" for nombre, (_, icono) in AMENAZAS.items()]
+    nombres = list(AMENAZAS.keys())
+    etiquetas = [f"{AMENAZAS[n][1]} {AMENAZAS_CORTAS[n]}" for n in nombres]
     m = datos.set_index("pais")[columnas].copy()
     m = m.loc[m.sum(axis=1).sort_values(ascending=False).index]
+
+    hover_text = []
+    for pais, valores in m.iterrows():
+        fila_hover = []
+        for i, valor in enumerate(valores):
+            estado = "Reportado" if int(valor) == 1 else "No priorizado"
+            fila_hover.append(f"<b>{html.escape(str(pais))}</b><br>{html.escape(nombres[i])}<br>{estado}")
+        hover_text.append(fila_hover)
 
     fig = go.Figure(
         data=go.Heatmap(
@@ -282,19 +416,20 @@ def matriz_amenazas(datos):
             zmax=1,
             colorscale=[[0, "#F1F5F7"], [0.499, "#F1F5F7"], [0.5, AZUL_SEC], [1, AZUL_SEC]],
             showscale=False,
-            xgap=2,
-            ygap=2,
-            hovertemplate="<b>%{y}</b><br>%{x}<br>%{z}<extra></extra>",
+            xgap=4,
+            ygap=3,
+            text=hover_text,
+            hovertemplate="%{text}<extra></extra>",
         )
     )
     fig.update_layout(
-        height=max(330, 28 * len(m) + 120),
-        margin=dict(l=10, r=10, t=10, b=120),
+        height=max(350, 25 * len(m) + 90),
+        margin=dict(l=0, r=4, t=8, b=52),
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
-    fig.update_xaxes(side="bottom", tickangle=-38, tickfont=dict(size=10))
-    fig.update_yaxes(autorange="reversed")
+    fig.update_xaxes(side="bottom", tickangle=0, tickfont=dict(size=10), showgrid=False)
+    fig.update_yaxes(autorange="reversed", tickfont=dict(size=10), showgrid=False)
     return fig
 
 
@@ -320,15 +455,16 @@ def evolucion_prioridad(base):
     )
     fig.update_layout(
         height=330,
-        margin=dict(l=10, r=10, t=10, b=20),
+        margin=dict(l=5, r=5, t=8, b=55),
         paper_bgcolor="white",
         plot_bgcolor="white",
         xaxis_title=None,
         yaxis_title="Países/territorios",
-        legend_title_text="Prioridad",
-        legend=dict(orientation="h", y=1.12, x=0),
+        legend_title_text="",
+        legend=dict(orientation="h", yanchor="top", y=-.17, xanchor="left", x=0, font=dict(size=10)),
     )
-    fig.update_yaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero")
+    fig.update_yaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero", zeroline=False)
+    fig.update_xaxes(showgrid=False)
     return fig
 
 
@@ -338,9 +474,7 @@ def heatmap_evolucion(base):
         .drop_duplicates()
         .sort_values(["sitrep_numero", "fecha_corte"])
     )
-    etiquetas_s = {
-        r.sitrep_id: f"S{int(r.sitrep_numero):02d}" for r in orden_s.itertuples()
-    }
+    etiquetas_s = {r.sitrep_id: f"S{int(r.sitrep_numero):02d}" for r in orden_s.itertuples()}
     cod = {"Sin priorización": 0, "Baja": 1, "Media": 2, "Alta": 3}
     t = base.copy()
     t["sitrep_label"] = t["sitrep_id"].map(etiquetas_s)
@@ -371,19 +505,19 @@ def heatmap_evolucion(base):
             zmax=3,
             colorscale=escala,
             showscale=False,
-            xgap=2,
-            ygap=2,
+            xgap=3,
+            ygap=3,
             customdata=texto_hover,
             hovertemplate="<b>%{y}</b><br>%{x}<br>%{customdata}<extra></extra>",
         )
     )
     fig.update_layout(
-        height=max(350, 27 * len(m) + 120),
-        margin=dict(l=10, r=10, t=10, b=30),
+        height=max(350, 25 * len(m) + 80),
+        margin=dict(l=0, r=4, t=8, b=35),
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
-    fig.update_yaxes(autorange="reversed")
+    fig.update_yaxes(autorange="reversed", tickfont=dict(size=10))
     return fig
 
 
@@ -397,24 +531,7 @@ except Exception as exc:
     st.error(f"No fue posible cargar los datos del dashboard: {exc}")
     st.stop()
 
-# Encabezado
-h_logo, h_texto = st.columns([1.2, 5.8], vertical_alignment="center")
-with h_logo:
-    if RUTA_LOGO.exists():
-        st.image(str(RUTA_LOGO), width=250)
-with h_texto:
-    st.markdown(
-        """
-        <div class="ops-header">
-            <div class="ops-kicker">Monitoreo regional</div>
-            <div class="ops-title">El Niño y salud pública en las Américas</div>
-            <div class="ops-subtitle">Prioridades sanitarias, amenazas, impactos y respuesta de OPS/OMS</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# Selector temporal
+# SitRep disponibles
 sit = (
     base[["sitrep_id", "sitrep_numero", "fecha_corte"]]
     .drop_duplicates()
@@ -423,20 +540,41 @@ sit = (
 labels_sitrep = {r.sitrep_id: sitrep_etiqueta(pd.Series(r._asdict())) for r in sit.itertuples(index=False)}
 ids = sit["sitrep_id"].tolist()
 
-f1, f2, f3, f4 = st.columns([1.1, 1.4, 1.2, 2.0])
-with f1:
-    sitrep_id = st.selectbox("SitRep / fecha", ids, format_func=lambda x: labels_sitrep.get(x, x))
+# Encabezado institucional
+logo_uri = logo_data_uri()
+logo_html = f'<img class="ops-logo" src="{logo_uri}" alt="OPS/OMS">' if logo_uri else ""
+st.markdown(
+    f"""
+    <div class="ops-hero">
+        <div class="ops-hero-copy">
+            <div class="ops-kicker">Monitoreo regional · Actualización mensual</div>
+            <div class="ops-title">El Niño y salud pública en las Américas</div>
+            <div class="ops-subtitle">Prioridades sanitarias, amenazas, impactos y respuesta de OPS/OMS.</div>
+        </div>
+        <div>{logo_html}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-actual = base[base["sitrep_id"] == sitrep_id].copy()
+# Filtros
+with st.container(border=True):
+    st.markdown('<div class="filter-label">Filtros de consulta</div>', unsafe_allow_html=True)
+    f1, f2, f3, f4 = st.columns([1.15, 1.35, 1.15, 1.85], gap="medium")
+    with f1:
+        sitrep_id = st.selectbox("SitRep / fecha", ids, format_func=lambda x: labels_sitrep.get(x, x))
 
-with f2:
-    opciones_sub = sorted(actual["subregion"].dropna().astype(str).unique())
-    filtro_sub = st.multiselect("Subregión", opciones_sub, placeholder="Todas")
-with f3:
-    opciones_pri = [p for p in ORDEN_PRIORIDAD if p in set(actual["prioridad"].dropna())]
-    filtro_pri = st.multiselect("Prioridad", opciones_pri, placeholder="Todas")
-with f4:
-    filtro_amenaza = st.multiselect("Amenaza / impacto", list(AMENAZAS.keys()), placeholder="Todas")
+    actual = base[base["sitrep_id"] == sitrep_id].copy()
+
+    with f2:
+        opciones_sub = sorted(actual["subregion"].dropna().astype(str).unique())
+        filtro_sub = st.multiselect("Subregión", opciones_sub, placeholder="Todas")
+    with f3:
+        opciones_pri = [p for p in ORDEN_PRIORIDAD if p in set(actual["prioridad"].dropna())]
+        filtro_pri = st.multiselect("Prioridad", opciones_pri, placeholder="Todas")
+    with f4:
+        filtro_amenaza = st.multiselect("Amenaza / impacto", list(AMENAZAS.keys()), placeholder="Todas")
+    st.markdown('<div class="filter-note">Los filtros actualizan todos los indicadores y visualizaciones del corte seleccionado.</div>', unsafe_allow_html=True)
 
 filtrado = actual.copy()
 if filtro_sub:
@@ -447,117 +585,151 @@ if filtro_amenaza:
     cols = [AMENAZAS[a][0] for a in filtro_amenaza]
     filtrado = filtrado[filtrado[cols].eq(1).any(axis=1)]
 
+hay_filtros = bool(filtro_sub or filtro_pri or filtro_amenaza)
+
 # KPIs
-k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Países/territorios", int(len(filtrado)))
+section_header("Panorama del corte", "Indicadores principales para la selección actual")
+k1, k2, k3, k4, k5 = st.columns(5, gap="medium")
+k1.metric("Países / territorios", int(len(filtrado)))
 k2.metric("🔴 Prioridad alta", int((filtrado["prioridad"] == "Alta").sum()))
 k3.metric("🟠 Prioridad media", int((filtrado["prioridad"] == "Media").sum()))
 k4.metric("Declaratoria activa", int(filtrado["declaratoria_activa"].apply(es_activo).sum()))
-k5.metric("Impacto en salud documentado", int(filtrado["impacto_salud_documentado"].apply(es_impacto).sum()))
+k5.metric("Impacto en salud", int(filtrado["impacto_salud_documentado"].apply(es_impacto).sum()))
 
-st.markdown('<div class="section-title">Panorama regional</div>', unsafe_allow_html=True)
-col_mapa, col_resumen = st.columns([3.8, 1.2], gap="large")
+# Mapa y resumen
+section_header("Panorama regional", "Distribución de prioridades y amenazas reportadas")
+col_mapa, col_resumen = st.columns([4.15, 1.35], gap="medium")
 with col_mapa:
-    fig_mapa = construir_mapa(geo, filtrado)
-    st.plotly_chart(fig_mapa, use_container_width=True, config={"displayModeBar": False})
+    with st.container(border=True):
+        fig_mapa = construir_mapa(geo, actual, filtrado, hay_filtros)
+        st.plotly_chart(fig_mapa, use_container_width=True, config=CHART_CONFIG)
 with col_resumen:
-    st.markdown("#### Principales amenazas")
+    st.markdown('<div class="summary-card"><div class="summary-title">Principales amenazas</div>', unsafe_allow_html=True)
     for nombre, (col, icono) in AMENAZAS.items():
         n = int(filtrado[col].sum()) if col in filtrado.columns else 0
         st.markdown(
-            f'<div class="threat-row"><span>{icono} {nombre}</span><span class="threat-count">{n}</span></div>',
+            f'<div class="threat-row"><span>{icono} {html.escape(nombre)}</span><span class="threat-count">{n}</span></div>',
             unsafe_allow_html=True,
         )
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("#### Prioridad")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="summary-card"><div class="summary-title">Nivel de prioridad</div>', unsafe_allow_html=True)
     for p in ORDEN_PRIORIDAD:
         n = int((filtrado["prioridad"] == p).sum())
+        txt_color = "#5D4B00" if p == "Baja" else COLORES_PRIORIDAD[p]
         st.markdown(
-            f'<div class="threat-row"><span><span style="color:{COLORES_PRIORIDAD[p]};font-size:1.25rem">●</span> {p}</span><span class="threat-count">{n}</span></div>',
+            f'<div class="threat-row"><span><span style="color:{COLORES_PRIORIDAD[p]};font-size:1.1rem">●</span> {html.escape(p)}</span><span class="threat-count" style="color:{txt_color}">{n}</span></div>',
             unsafe_allow_html=True,
         )
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Situación regional
-st.markdown('<div class="section-title">Situación regional</div>', unsafe_allow_html=True)
-g1, g2 = st.columns([1.0, 1.35], gap="large")
+section_header("Situación regional", "Comparación territorial y perfil de amenazas")
+g1, g2 = st.columns([1.0, 1.45], gap="medium")
 with g1:
-    st.markdown("**Prioridad por subregión**")
-    st.plotly_chart(grafico_subregion(filtrado), use_container_width=True, config={"displayModeBar": False})
+    with st.container(border=True):
+        st.markdown("**Prioridad por subregión**")
+        st.plotly_chart(grafico_subregion(filtrado), use_container_width=True, config=CHART_CONFIG)
 with g2:
-    st.markdown("**País × amenaza / impacto**")
-    st.plotly_chart(matriz_amenazas(filtrado), use_container_width=True, config={"displayModeBar": False})
+    with st.container(border=True):
+        st.markdown("**País × amenaza / impacto**")
+        st.plotly_chart(matriz_amenazas(filtrado), use_container_width=True, config=CHART_CONFIG)
 
 # Evolución temporal
-st.markdown('<div class="section-title">Evolución temporal</div>', unsafe_allow_html=True)
+section_header("Evolución temporal", "Cambios entre cortes mensuales del SitRep")
 if base["sitrep_id"].nunique() < 2:
-    st.info("La evolución temporal se activará automáticamente cuando la base contenga dos o más SitRep. La estructura ya está preparada.")
+    st.markdown(
+        '<div class="empty-state"><b>Serie temporal aún no disponible.</b> Esta sección se activará automáticamente cuando la base contenga dos o más SitRep.</div>',
+        unsafe_allow_html=True,
+    )
 else:
-    e1, e2 = st.columns([1, 1.15], gap="large")
+    e1, e2 = st.columns([1, 1.18], gap="medium")
     with e1:
-        st.markdown("**Países por nivel de prioridad**")
-        st.plotly_chart(evolucion_prioridad(base), use_container_width=True, config={"displayModeBar": False})
+        with st.container(border=True):
+            st.markdown("**Países por nivel de prioridad**")
+            st.plotly_chart(evolucion_prioridad(base), use_container_width=True, config=CHART_CONFIG)
     with e2:
-        st.markdown("**Evolución de prioridad por país**")
-        st.plotly_chart(heatmap_evolucion(base), use_container_width=True, config={"displayModeBar": False})
+        with st.container(border=True):
+            st.markdown("**Evolución de prioridad por país**")
+            st.plotly_chart(heatmap_evolucion(base), use_container_width=True, config=CHART_CONFIG)
 
 # Detalle país
-st.markdown('<div class="section-title">Detalle por país / territorio</div>', unsafe_allow_html=True)
+section_header("Detalle por país / territorio", "Lectura cualitativa y cifras disponibles para el corte seleccionado")
 if filtrado.empty:
     st.warning("No hay países/territorios que cumplan los filtros seleccionados.")
 else:
-    paises = filtrado.sort_values(["prioridad", "pais"])["pais"].tolist()
-    pais_sel = st.selectbox("Selecciona un país o territorio", paises)
-    fila = filtrado[filtrado["pais"] == pais_sel].iloc[0]
-    prioridad = texto(fila.get("prioridad"), "Sin priorización")
-    color_p = COLORES_PRIORIDAD.get(prioridad, GRIS)
+    with st.container(border=True):
+        selector_col, _ = st.columns([1.25, 2.75])
+        with selector_col:
+            paises = filtrado.sort_values(["prioridad", "pais"])["pais"].tolist()
+            pais_sel = st.selectbox("País / territorio", paises)
 
-    d1, d2, d3 = st.columns([1.8, 1.25, 1.25])
-    with d1:
-        st.markdown(f"### {pais_sel}")
+        fila = filtrado[filtrado["pais"] == pais_sel].iloc[0]
+        prioridad = texto(fila.get("prioridad"), "Sin priorización")
+        color_p = COLORES_PRIORIDAD.get(prioridad, GRIS)
+        badge_class = "priority-pill light" if prioridad == "Baja" else "priority-pill"
+
         st.markdown(
-            f'<span class="priority-pill" style="background:{color_p}">{prioridad}</span>',
+            f"""
+            <div class="country-summary">
+                <div>
+                    <div class="country-name">{html.escape(pais_sel)}</div>
+                    <span class="{badge_class}" style="background:{color_p}">{html.escape(prioridad)}</span>
+                </div>
+                <div>
+                    <div class="summary-label">Situación predominante</div>
+                    <div class="summary-text">{texto_html(fila.get('situacion_predominante'))}</div>
+                </div>
+                <div>
+                    <div class="summary-label">Atribución a El Niño</div>
+                    <div class="summary-text">{texto_html(fila.get('atribucion_elnino'))}</div>
+                </div>
+            </div>
+            """,
             unsafe_allow_html=True,
         )
-    with d2:
-        st.markdown("**Situación predominante**")
-        st.write(texto(fila.get("situacion_predominante")))
-    with d3:
-        st.markdown("**Atribución a El Niño**")
-        st.write(texto(fila.get("atribucion_elnino")))
 
-    c1, c2, c3, c4 = st.columns(4, gap="medium")
-    bloques = [
-        (c1, "Amenazas", fila.get("amenazas_resumen")),
-        (c2, "Impacto en salud", fila.get("impacto_salud_resumen")),
-        (c3, "Alistamiento / respuesta", fila.get("alistamiento_respuesta")),
-        (c4, "Acciones OPS/OMS", fila.get("acciones_ops")),
-    ]
-    for col, titulo, contenido in bloques:
-        with col:
-            st.markdown(
-                f'<div class="detail-card"><h4>{titulo}</h4><p>{texto(contenido)}</p></div>',
-                unsafe_allow_html=True,
-            )
+        r1a, r1b = st.columns(2, gap="medium")
+        r2a, r2b = st.columns(2, gap="medium")
+        bloques = [
+            (r1a, "Amenazas", fila.get("amenazas_resumen")),
+            (r1b, "Impacto en salud", fila.get("impacto_salud_resumen")),
+            (r2a, "Alistamiento / respuesta", fila.get("alistamiento_respuesta")),
+            (r2b, "Acciones OPS/OMS", fila.get("acciones_ops")),
+        ]
+        for col, titulo, contenido in bloques:
+            with col:
+                st.markdown(
+                    f'<div class="detail-card"><h4>{html.escape(titulo)}</h4><p>{texto_html(contenido)}</p></div>',
+                    unsafe_allow_html=True,
+                )
 
-    cifras_disponibles = []
-    for col, etiqueta in CIFRAS.items():
-        if col in fila.index and pd.notna(fila[col]):
-            cifras_disponibles.append((etiqueta, formato_numero(float(fila[col]))))
+        cifras_disponibles = []
+        for col, etiqueta in CIFRAS.items():
+            if col in fila.index and pd.notna(fila[col]):
+                cifras_disponibles.append((etiqueta, formato_numero(float(fila[col]))))
 
-    if cifras_disponibles:
-        st.markdown("**Cifras reportadas en el SitRep**")
-        columnas = st.columns(min(6, len(cifras_disponibles)))
-        for i, (etiqueta, valor) in enumerate(cifras_disponibles):
-            columnas[i % len(columnas)].metric(etiqueta, valor)
+        if cifras_disponibles:
+            st.markdown("<br>**Cifras reportadas en el SitRep**", unsafe_allow_html=True)
+            for inicio in range(0, len(cifras_disponibles), 4):
+                lote = cifras_disponibles[inicio:inicio + 4]
+                columnas = st.columns(len(lote), gap="medium")
+                for columna, (etiqueta, valor) in zip(columnas, lote):
+                    columna.metric(etiqueta, valor)
 
-    pie = []
-    if "declaratoria_activa" in fila.index:
-        pie.append(f"Declaratoria: {texto(fila.get('declaratoria_activa'))}")
-    if "nivel_declaratoria" in fila.index:
-        pie.append(texto(fila.get("nivel_declaratoria"), ""))
-    if "fuentes_resumen" in fila.index:
-        pie.append(f"Fuentes: {texto(fila.get('fuentes_resumen'))}")
-    st.markdown(f'<div class="caption-box">{" · ".join([x for x in pie if x])}</div>', unsafe_allow_html=True)
+        pie = []
+        if "declaratoria_activa" in fila.index:
+            pie.append(f"Declaratoria: {texto(fila.get('declaratoria_activa'))}")
+        if "nivel_declaratoria" in fila.index:
+            pie.append(texto(fila.get("nivel_declaratoria"), ""))
+        if "fuentes_resumen" in fila.index:
+            pie.append(f"Fuentes: {texto(fila.get('fuentes_resumen'))}")
+        st.markdown(
+            f'<div class="caption-box">{html.escape(" · ".join([x for x in pie if x]))}</div>',
+            unsafe_allow_html=True,
+        )
 
 st.divider()
-st.caption("Fuente: base maestra de monitoreo de El Niño de OPS/OMS. El tablero toma automáticamente el SitRep seleccionado y conserva la serie histórica para análisis temporal.")
+st.caption(
+    "Fuente: base maestra de monitoreo de El Niño de OPS/OMS. El tablero toma automáticamente el SitRep seleccionado y conserva la serie histórica para análisis temporal."
+)
