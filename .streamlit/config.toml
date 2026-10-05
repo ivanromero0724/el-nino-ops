@@ -7,3 +7,5 @@ font = "sans serif"
 
 [browser]
 gatherUsageStats = false
+
+# Actualización visual: pictogramas SitRep unificados y mapa interactivo ajustado.
