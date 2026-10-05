@@ -82,6 +82,29 @@ POSICIONES_AMENAZAS = {
     "USA": (-98.0, 31.0),
 }
 
+
+# Posición de las etiquetas de amenazas. Se ubican principalmente sobre océano
+# o espacios libres para evitar tapar los países y mejorar la lectura.
+POSICIONES_CALLOUTS = {
+    "MEX": (-112.5, 27.0),
+    "GTM": (-107.0, 20.0),
+    "HND": (-104.0, 16.1),
+    "SLV": (-103.0, 11.7),
+    "CRI": (-98.3, 7.4),
+    "PAN": (-92.0, 3.5),
+    "JAM": (-76.0, 25.5),
+    "PRI": (-64.0, 25.5),
+    "TTO": (-49.0, 13.0),
+    "COL": (-90.0, 0.0),
+    "ECU": (-91.0, -6.0),
+    "PER": (-91.0, -12.5),
+    "BOL": (-48.0, -18.0),
+    "BRA": (-39.5, -8.5),
+    "CHL": (-88.0, -29.5),
+    "ARG": (-79.0, -40.0),
+    "URY": (-45.0, -34.0),
+}
+
 CIFRAS = {
     "personas_afectadas": "Personas afectadas",
     "personas_damnificadas": "Personas damnificadas",
@@ -449,55 +472,69 @@ def construir_mapa(
             amenazas_visibles = list(AMENAZAS.keys())
 
         posiciones = posiciones_pais(geo)
-        lon_list, lat_list, text_list, hover_list, size_list = [], [], [], [], []
+        line_lon, line_lat = [], []
+        anchor_lon, anchor_lat = [], []
+        label_lon, label_lat, label_text, label_hover = [], [], [], []
 
         for _, fila in datos_filtrados.iterrows():
             iso = str(fila.get("iso3", ""))
-            if iso not in posiciones:
+            if iso not in posiciones or iso not in POSICIONES_CALLOUTS:
                 continue
 
-            etiqueta, nombres = resumen_iconos_pais(
-                fila,
-                seleccion=amenazas_visibles,
-                max_iconos=2,
-            )
-            if not etiqueta:
+            activas = amenazas_de_fila(fila, amenazas_visibles)
+            if not activas:
                 continue
 
             lon0, lat0 = posiciones[iso]
+            lon1, lat1 = POSICIONES_CALLOUTS[iso]
+            pais = texto(fila.get("pais"), iso)
+            iconos = "  ".join(icono for _, icono in activas)
             detalle = "<br>".join(
-                f"{AMENAZAS[n][1]} {html.escape(n)}" for n in nombres
+                f"{icono} {html.escape(nombre)}" for nombre, icono in activas
             )
 
-            lon_list.append(lon0)
-            lat_list.append(lat0)
-            text_list.append(etiqueta)
-            hover_list.append(
-                f"<b>{html.escape(texto(fila.get('pais'), iso))}</b><br>{detalle}"
-            )
-            size_list.append(38 if len(nombres) > 2 else 34)
+            # Segmentos independientes separados por None.
+            line_lon.extend([lon0, lon1, None])
+            line_lat.extend([lat0, lat1, None])
+            anchor_lon.append(lon0)
+            anchor_lat.append(lat0)
+            label_lon.append(lon1)
+            label_lat.append(lat1)
+            label_text.append(f"<b>{html.escape(pais)}</b><br>{iconos}")
+            label_hover.append(f"<b>{html.escape(pais)}</b><br>{detalle}")
 
-        if lon_list:
+        if label_lon:
             fig.add_trace(
                 go.Scattergeo(
-                    lon=lon_list,
-                    lat=lat_list,
-                    mode="markers+text",
-                    marker=dict(
-                        size=size_list,
-                        color="rgba(255,255,255,.97)",
-                        line=dict(color="rgba(0,75,135,.55)", width=1.3),
-                    ),
-                    text=text_list,
+                    lon=line_lon,
+                    lat=line_lat,
+                    mode="lines",
+                    line=dict(color="rgba(0,75,135,.72)", width=1.15),
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
+            fig.add_trace(
+                go.Scattergeo(
+                    lon=anchor_lon,
+                    lat=anchor_lat,
+                    mode="markers",
+                    marker=dict(size=5, color=AZUL_OPS),
+                    hoverinfo="skip",
+                    showlegend=False,
+                )
+            )
+            fig.add_trace(
+                go.Scattergeo(
+                    lon=label_lon,
+                    lat=label_lat,
+                    mode="text",
+                    text=label_text,
                     textposition="middle center",
-                    textfont=dict(size=13, color=TEXTO),
-                    hovertext=hover_list,
+                    textfont=dict(size=11, color=AZUL_OPS),
+                    hovertext=label_hover,
                     hovertemplate="%{hovertext}<extra></extra>",
-                    hoverlabel=dict(
-                        bgcolor="white",
-                        font_size=12,
-                        font_color=TEXTO,
-                    ),
+                    hoverlabel=dict(bgcolor="white", font_size=12, font_color=TEXTO),
                     showlegend=False,
                 )
             )
@@ -797,7 +834,7 @@ with st.container(border=True):
         else:
             amenazas_mapa = []
     st.markdown(
-        '<div class="map-note">El color del país representa la prioridad. Cada burbuja resume las amenazas / impactos reportados por país; al pasar el cursor se ve el detalle completo. Estos controles solo cambian la visualización del mapa.</div>',
+        '<div class="map-note">El color del país representa la prioridad. Los callouts conectan cada país con sus amenazas / impactos reportados; al pasar el cursor se ve el detalle completo. Estos controles solo cambian la visualización del mapa.</div>',
         unsafe_allow_html=True,
     )
 
