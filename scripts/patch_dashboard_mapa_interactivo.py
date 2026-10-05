@@ -195,17 +195,63 @@ legacy = legacy.replace(
     1,
 )
 
-# 9) Aumentar un poco más el tamaño de los pictogramas bajo la matriz.
+# 9) Reorganizar la leyenda inferior de la matriz:
+# pictograma arriba y nombre debajo, con iconos un poco más grandes.
+legacy = legacy.replace(
+    '        margin=dict(l=0, r=4, t=8, b=104),\n',
+    '        margin=dict(l=0, r=4, t=8, b=138),\n',
+    1,
+)
+legacy = legacy.replace(
+    '    fig.update_xaxes(side="bottom", tickangle=0, tickfont=dict(size=10), showgrid=False)\n',
+    '    fig.update_xaxes(side="bottom", showticklabels=False, ticks="", showgrid=False)\n',
+    1,
+)
+legacy = legacy.replace(
+    '            x=(i + .5) / len(nombres), y=-.145,\n',
+    '            x=(i + .5) / len(nombres), y=-.072,\n',
+    1,
+)
 legacy = legacy.replace(
     '            sizex=.038, sizey=.038,\n',
-    '            sizex=.060, sizey=.060,\n',
+    '            sizex=.072, sizey=.072,\n',
     1,
 )
 legacy = legacy.replace(
     '            sizex=.052, sizey=.052,\n',
+    '            sizex=.072, sizey=.072,\n',
+    1,
+)
+legacy = legacy.replace(
     '            sizex=.060, sizey=.060,\n',
+    '            sizex=.072, sizey=.072,\n',
     1,
 )
 
+# Añadir los nombres debajo de cada pictograma.
+annotation_marker = '''        ))
+    return fig
+
+
+def evolucion_prioridad(base):'''
+annotation_block = '''        ))
+        etiqueta = etiquetas[i]
+        fig.add_annotation(
+            x=(i + .5) / len(nombres),
+            y=-.155,
+            xref="paper", yref="paper",
+            text=etiqueta,
+            showarrow=False,
+            xanchor="center", yanchor="top",
+            align="center",
+            font=dict(size=10, color="#6F7589"),
+        )
+    return fig
+
+
+def evolucion_prioridad(base):'''
+if annotation_marker in legacy and 'y=-.155' not in legacy:
+    legacy = legacy.replace(annotation_marker, annotation_block, 1)
+
 p.write_text(legacy, encoding="utf-8")
-print("OK: matriz con rótulos separados e iconos más grandes")
+print("OK: matriz con iconos arriba, nombres abajo e iconos ampliados")
