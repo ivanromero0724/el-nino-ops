@@ -4,6 +4,7 @@ from urllib.request import urlretrieve
 import pandas as pd
 import geopandas as gpd
 
+# Geografía regional usada tanto por el mapa SitRep como por el dashboard.
 BASE = Path(__file__).resolve().parents[1]
 SALIDA = BASE / "data" / "geografia" / "paises_americas.gpkg"
 TMP = BASE / "data" / "geografia" / "_natural_earth_50m.geojson"
