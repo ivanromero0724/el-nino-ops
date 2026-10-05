@@ -377,9 +377,12 @@ def _construir_folium(frame_globals):
             interactive=False,
         ).add_to(m)
 
-    # Encuadre exacto: México completo hasta el extremo sur de Sudamérica.
+    # Encuadre inicial centrado visualmente en el continente americano.
+    # El mapa es mucho más ancho que alto; si usamos límites simétricos,
+    # sobra demasiado Pacífico y aparece Hawái. Desplazamos el centro hacia
+    # el Atlántico manteniendo visibles México y toda Sudamérica.
     m.fit_bounds(
-        [[-57.5, -119.0], [33.0, -31.5]],
+        [[-57.5, -119.0], [33.0, -12.0]],
         padding_top_left=[10, 10],
         padding_bottom_right=[10, 10],
     )
