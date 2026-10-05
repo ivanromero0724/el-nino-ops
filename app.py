@@ -12,6 +12,7 @@ import inspect
 import json
 import sys
 import html
+import os
 
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
@@ -662,7 +663,9 @@ def _pyplot_interactivo(fig=None, *args, **kwargs):
 st.pyplot = _pyplot_interactivo
 
 # Ejecutar el dashboard original en cada rerun de Streamlit.
-if "app_legacy" in sys.modules:
-    importlib.reload(sys.modules["app_legacy"])
-else:
-    importlib.import_module("app_legacy")
+# En CI se puede importar este módulo sin lanzar toda la app para probar el mapa.
+if os.environ.get("OPS_MAP_SMOKE_TEST") != "1":
+    if "app_legacy" in sys.modules:
+        importlib.reload(sys.modules["app_legacy"])
+    else:
+        importlib.import_module("app_legacy")
