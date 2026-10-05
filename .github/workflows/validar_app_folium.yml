@@ -103,7 +103,7 @@ jobs:
               "campo país": "pais_popup" in rendered,
               "campo prioridad": "prioridad_popup" in rendered,
               "campo amenazas": "amenazas_popup" in rendered,
-              "campo situación": "situacion_popup" in rendered,
+              "situación fuera del popup": "situacion_popup" not in rendered,
               "fit bounds": "fitBounds" in rendered,
               "callout": "#075594" in rendered,
           }
@@ -167,6 +167,9 @@ jobs:
               if "Prioridad" not in texto or "Amenazas / impactos" not in texto:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Tooltip incompleto: {texto!r}")
+              if "Situación" in texto:
+                  page.screenshot(path="mapa_hover_fallo.png", full_page=True)
+                  raise AssertionError(f"El popup todavía muestra Situación: {texto!r}")
 
               # Verificar que el encuadre visible contiene México y el extremo sur
               # de Sudamérica. Se toma la instancia Leaflet creada por Folium.
@@ -185,8 +188,25 @@ jobs:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Encuadre incompleto México-Sudamérica: {bounds}")
 
+              limites_navegacion = folium_frame.evaluate("""() => {
+                  const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getBounds);
+                  if (!key) return null;
+                  const mb = window[key].options.maxBounds;
+                  if (!mb) return null;
+                  return {
+                      south: mb.getSouth(), west: mb.getWest(),
+                      north: mb.getNorth(), east: mb.getEast()
+                  };
+              }""")
+              if not limites_navegacion:
+                  raise AssertionError("No se pudieron leer los límites de navegación")
+              if limites_navegacion["north"] < 80 or limites_navegacion["west"] > -140:
+                  page.screenshot(path="mapa_hover_fallo.png", full_page=True)
+                  raise AssertionError(f"Canadá sigue limitado: {limites_navegacion}")
+
               print("OK tooltip navegador:", texto[:300])
               print("OK bounds:", bounds)
+              print("OK navegación Canadá:", limites_navegacion)
               page.screenshot(path="mapa_hover_ok.png", full_page=True)
               browser.close()
           PY
@@ -248,8 +268,26 @@ jobs:
               if "Prioridad" not in texto or "Amenazas / impactos" not in texto:
                   page.screenshot(path="mapa_live_fallo.png", full_page=True)
                   raise AssertionError(f"Tooltip live incompleto: {texto!r}")
+              if "Situación" in texto:
+                  page.screenshot(path="mapa_live_fallo.png", full_page=True)
+                  raise AssertionError(f"El popup live todavía muestra Situación: {texto!r}")
+
+              limites_navegacion = folium_frame.evaluate("""() => {
+                  const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getBounds);
+                  if (!key) return null;
+                  const mb = window[key].options.maxBounds;
+                  if (!mb) return null;
+                  return {
+                      south: mb.getSouth(), west: mb.getWest(),
+                      north: mb.getNorth(), east: mb.getEast()
+                  };
+              }""")
+              if not limites_navegacion or limites_navegacion["north"] < 80 or limites_navegacion["west"] > -140:
+                  page.screenshot(path="mapa_live_fallo.png", full_page=True)
+                  raise AssertionError(f"La versión live sigue limitada antes de Canadá: {limites_navegacion}")
 
               print("OK LIVE tooltip:", texto[:300])
+              print("OK LIVE navegación Canadá:", limites_navegacion)
               page.screenshot(path="mapa_live_ok.png", full_page=True)
               browser.close()
           PY
