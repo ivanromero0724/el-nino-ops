@@ -70,26 +70,28 @@ jobs:
               'ax=fig.add_axes([.020,0,.620,1.0])'
           )
 
-          # Zoom enfocado en los países priorizados. Se conserva algo de EEUU
-          # como contexto, pero se evita dedicar gran parte del mapa a EEUU/Canadá.
+          # Un poco más de zoom sobre México, Centroamérica, Caribe y Sudamérica.
+          # Se deja solo una franja de EEUU como contexto y prácticamente nada de Canadá.
           extensiones_previas = [
               'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")',
               'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,36); ax.set_aspect("equal",adjustable="box")',
               'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-130,-22); ax.set_ylim(-58,56); ax.set_aspect("equal",adjustable="box")',
+              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-27.5); ax.set_ylim(-58,44); ax.set_aspect("equal",adjustable="box")',
           ]
           for old in extensiones_previas:
               txt = txt.replace(
                   old,
-                  'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-27.5); ax.set_ylim(-58,44); ax.set_aspect("equal",adjustable="box")'
+                  'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-123,-30); ax.set_ylim(-58,40); ax.set_aspect("equal",adjustable="box")'
               )
 
           rectangulos_previos = [
               'Rectangle((-124,-58),94,90,',
               'Rectangle((-124,-58),94,94,',
               'Rectangle((-130,-58),108,114,',
+              'Rectangle((-124,-58),96.5,102,',
           ]
           for old in rectangulos_previos:
-              txt = txt.replace(old, 'Rectangle((-124,-58),96.5,102,')
+              txt = txt.replace(old, 'Rectangle((-123,-58),93,98,')
 
           # Fondo azul detrás de toda la columna del mapa.
           fondo_columna = '    fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))'
@@ -115,7 +117,7 @@ jobs:
           txt = txt.replace('OffsetImage(logo,zoom=.32)', 'OffsetImage(logo,zoom=.50)')
 
           p.write_text(txt, encoding="utf-8")
-          print("Estilo actualizado: mayor zoom en países priorizados y menor presencia de EEUU/Canadá")
+          print("Estilo actualizado: zoom adicional y menor presencia de EEUU/Canadá")
           PY
 
       - name: Preparar geografía
@@ -132,6 +134,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
           else
-            git commit -m "Aumentar zoom del mapa y reducir presencia de EEUU y Canadá"
+            git commit -m "Aumentar un poco más el zoom del mapa"
             git push
           fi
