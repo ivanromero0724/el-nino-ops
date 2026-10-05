@@ -131,3 +131,5 @@ if old_note in txt:
 
 p.write_text(txt, encoding="utf-8")
 print("Mapa cambiado de burbujas a callouts")
+
+# Cambio mínimo para disparar el workflow tras crear su definición.
