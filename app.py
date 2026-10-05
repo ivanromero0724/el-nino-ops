@@ -89,7 +89,7 @@ st.markdown(
     <style>
         :root {{ --ops-blue:{AZUL_OPS}; --ops-blue2:{AZUL_SEC}; --ops-border:{BORDE}; }}
         .block-container {{
-            padding-top: .9rem;
+            padding-top: 4.25rem !important;
             padding-bottom: 2.2rem;
             max-width: 1420px;
         }}
@@ -106,7 +106,10 @@ st.markdown(
             border-radius:18px;
             padding:1.15rem 1.45rem;
             box-shadow:0 4px 18px rgba(0,75,135,.07);
+            margin-top:.25rem;
             margin-bottom:.9rem;
+            position:relative;
+            z-index:1;
         }}
         .ops-hero-copy {{min-width:0;}}
         .ops-kicker {{
@@ -193,6 +196,7 @@ st.markdown(
         div[data-testid="stSelectbox"], div[data-testid="stMultiSelect"] {{font-size:.9rem;}}
 
         @media (max-width: 900px) {{
+            .block-container {{padding-top:4.75rem !important;}}
             .ops-hero {{padding:1rem; gap:1rem;}}
             .ops-title {{font-size:1.55rem;}}
             .ops-logo {{width:165px; max-width:32vw;}}
