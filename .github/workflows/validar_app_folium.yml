@@ -168,7 +168,25 @@ jobs:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Tooltip incompleto: {texto!r}")
 
+              # Verificar que el encuadre visible contiene México y el extremo sur
+              # de Sudamérica. Se toma la instancia Leaflet creada por Folium.
+              bounds = folium_frame.evaluate("""() => {
+                  const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getBounds);
+                  if (!key) return null;
+                  const b = window[key].getBounds();
+                  return {
+                      south: b.getSouth(), west: b.getWest(),
+                      north: b.getNorth(), east: b.getEast()
+                  };
+              }""")
+              if not bounds:
+                  raise AssertionError("No se pudieron leer los límites del mapa Leaflet")
+              if not (bounds["south"] <= -55 and bounds["north"] >= 31 and bounds["west"] <= -116 and bounds["east"] >= -36):
+                  page.screenshot(path="mapa_hover_fallo.png", full_page=True)
+                  raise AssertionError(f"Encuadre incompleto México-Sudamérica: {bounds}")
+
               print("OK tooltip navegador:", texto[:300])
+              print("OK bounds:", bounds)
               page.screenshot(path="mapa_hover_ok.png", full_page=True)
               browser.close()
           PY
