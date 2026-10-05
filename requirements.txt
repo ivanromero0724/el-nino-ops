@@ -5,4 +5,5 @@ numpy
 Pillow
 pyogrio
 plotly
+pydeck
 streamlit
