@@ -8,7 +8,7 @@ on:
       - "scripts/mapa_sitrep.py"
       - "scripts/preparar_geografia.py"
       - "assets/ops_oms.png"
-      - "assets/logo_source/**"
+      - "assets/logo_payload/**"
       - "requirements.txt"
       - ".github/workflows/generar_mapa.yml"
 
@@ -33,15 +33,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Reconstruir logo OPS/OMS
+      - name: Reconstruir y validar logo OPS/OMS
         run: |
-          cat assets/logo_source/part*.b64 | tr -d '\n\r ' | base64 --decode > assets/ops_oms.png
+          cat assets/logo_payload/current*.b64 | tr -d '\n\r ' | base64 --decode > assets/ops_oms.png
           python - <<'PY'
           from PIL import Image
           p = "assets/ops_oms.png"
           im = Image.open(p)
           im.verify()
-          print("Logo válido:", p)
+          im = Image.open(p)
+          print("Logo válido:", p, im.size, im.mode)
           PY
 
       - name: Preparar geografía
@@ -58,6 +59,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
           else
-            git commit -m "Actualizar GeoPackage, logo y mapa del SitRep"
+            git commit -m "Actualizar logo OPS/OMS y mapa del SitRep"
             git push
           fi
