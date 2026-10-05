@@ -47,48 +47,68 @@ jobs:
           print("OK: estructura Folium y hover presentes")
           PY
 
-      - name: Smoke test de Folium tooltip
+      - name: Smoke test del mapa real
+        env:
+          OPS_MAP_SMOKE_TEST: "1"
         run: |
           python - <<'PY'
-          import folium
-          from folium.features import GeoJsonTooltip
+          import pandas as pd
+          import geopandas as gpd
+          from shapely.geometry import Polygon
+          import app
 
-          geo = {
-              "type": "FeatureCollection",
-              "features": [{
-                  "type": "Feature",
-                  "properties": {
-                      "pais_popup": "México",
-                      "prioridad_popup": "Alta",
-                      "amenazas_popup": "Sequía",
-                      "situacion_popup": "Prueba",
-                      "fill_hex": "#D71920",
-                  },
-                  "geometry": {
-                      "type": "Polygon",
-                      "coordinates": [[[-100,20],[-99,20],[-99,21],[-100,21],[-100,20]]],
-                  },
-              }],
+          geo = gpd.GeoDataFrame(
+              {
+                  "COUNTRY": ["Mexico"],
+                  "ISO_CC": ["MEX"],
+              },
+              geometry=[Polygon([(-118,14),(-86,14),(-86,33),(-118,33),(-118,14)])],
+              crs="EPSG:4326",
+          )
+          actual = pd.DataFrame([{
+              "iso3": "MEX",
+              "pais": "México",
+              "prioridad": "Alta",
+              "situacion_predominante": "Déficit de precipitación e incremento del riesgo de incendios.",
+              "icono_agua": 1,
+              "icono_inundaciones": 0,
+              "icono_incendios": 1,
+              "icono_alimentos": 0,
+              "icono_arbovirosis": 0,
+              "icono_respiratorio": 0,
+              "icono_servicios": 0,
+          }])
+          frame = {
+              "geo": geo,
+              "actual": actual,
+              "filtrado": actual.copy(),
+              "hay_filtros": False,
+              "amenazas_mapa": list(app.AMENAZAS.keys()),
+              "AMENAZAS_CORTAS": {
+                  "Sequía / agua": "Sequía",
+                  "Inundaciones / lluvias": "Inundaciones",
+                  "Incendios / quemadas": "Incendios",
+                  "Inseguridad alimentaria": "Inseguridad alimentaria",
+                  "Dengue / otras arbovirosis": "Arbovirosis",
+                  "Calidad del aire / riesgo respiratorio": "Aire",
+                  "Afectación de servicios de salud": "Afectación servicios",
+              },
           }
 
-          m = folium.Map(location=[20.5,-99.5], zoom_start=5, tiles=None)
-          folium.GeoJson(
-              geo,
-              style_function=lambda feat: {
-                  "fillColor": feat["properties"]["fill_hex"],
-                  "color": "#FFFFFF",
-                  "weight": 1,
-                  "fillOpacity": 1,
-              },
-              tooltip=GeoJsonTooltip(
-                  fields=["pais_popup","prioridad_popup","amenazas_popup","situacion_popup"],
-                  aliases=["País:","Prioridad:","Amenazas / impactos:","Situación:"],
-                  sticky=True,
-              ),
-          ).add_to(m)
-          html = m.get_root().render()
-          assert "bindTooltip" in html
-          assert "pais_popup" in html
-          assert "México" in html
-          print("OK: Leaflet genera tooltip hover correctamente")
+          m = app._construir_folium(frame)
+          rendered = m.get_root().render()
+
+          checks = {
+              "hover Leaflet": "bindTooltip" in rendered,
+              "campo país": "pais_popup" in rendered,
+              "campo prioridad": "prioridad_popup" in rendered,
+              "campo amenazas": "amenazas_popup" in rendered,
+              "campo situación": "situacion_popup" in rendered,
+              "fit bounds": "fitBounds" in rendered,
+              "callout": "#075594" in rendered,
+          }
+          fallos = [k for k, ok in checks.items() if not ok]
+          if fallos:
+              raise SystemExit(f"Falló smoke test del mapa: {fallos}")
+          print("OK:", checks)
           PY
