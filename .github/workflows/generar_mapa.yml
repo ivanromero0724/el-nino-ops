@@ -61,24 +61,18 @@ jobs:
           p = Path("scripts/mapa_sitrep.py")
           txt = p.read_text(encoding="utf-8")
 
-          # Utilidades para verificar el PNG y generar una copia con nombre único
-          # por ejecución, evitando confundir una previsualización cacheada de GitHub.
           if "import os\n" not in txt:
               txt = txt.replace("from pathlib import Path\nimport math\n", "from pathlib import Path\nimport math\nimport os\nimport hashlib\n")
           elif "import hashlib\n" not in txt:
               txt = txt.replace("import os\n", "import os\nimport hashlib\n")
 
-          # Océano azul OPS claro.
           txt = txt.replace('AZUL_MAR = "#E5F6FB"', 'AZUL_MAR = "#D9EEF7"')
 
-          # El área cartográfica ocupa toda la altura de la página.
           txt = txt.replace(
               'ax=fig.add_axes([.020,.035,.620,.930])',
               'ax=fig.add_axes([.020,0,.620,1.0])'
           )
 
-          # Otro poco más de zoom. Se conserva apenas el sur de EEUU como contexto,
-          # eliminando prácticamente todo Canadá y dando protagonismo a los países priorizados.
           extensiones_previas = [
               'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")',
               'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,36); ax.set_aspect("equal",adjustable="box")',
@@ -102,7 +96,6 @@ jobs:
           for old in rectangulos_previos:
               txt = txt.replace(old, 'Rectangle((-121.5,-58),90.5,95.5,')
 
-          # Fondo azul detrás de toda la columna del mapa.
           fondo_columna = '    fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))'
           if fondo_columna not in txt:
               txt = txt.replace(
@@ -110,10 +103,8 @@ jobs:
                   '    fig=plt.figure(figsize=(13,8.5),facecolor="white")\n' + fondo_columna + '\n'
               )
 
-          # Sin padding externo para evitar franjas blancas.
           txt = txt.replace('pad_inches=.03', 'pad_inches=0')
 
-          # Logo OPS/OMS grande.
           txt = txt.replace(
               'ax_logo=fig.add_axes([.735,.035,.165,.135])',
               'ax_logo=fig.add_axes([.650,.005,.340,.220])'
@@ -125,38 +116,39 @@ jobs:
           txt = txt.replace('OffsetImage(logo,zoom=.145)', 'OffsetImage(logo,zoom=.50)')
           txt = txt.replace('OffsetImage(logo,zoom=.32)', 'OffsetImage(logo,zoom=.50)')
 
-          # Guardado robusto: se fuerza el render final, se reemplaza explícitamente
-          # el PNG, se valida y se crea además una copia única por ejecución.
-          bloque_anterior = '''    fig.savefig(salida_pdf,format="pdf",facecolor="white",bbox_inches="tight",pad_inches=0)
-    fig.savefig(salida_png,format="png",dpi=350,facecolor="white",bbox_inches="tight",pad_inches=0)
-    plt.close(fig)'''
+          bloque_anterior = "\n".join([
+              '    fig.savefig(salida_pdf,format="pdf",facecolor="white",bbox_inches="tight",pad_inches=0)',
+              '    fig.savefig(salida_png,format="png",dpi=350,facecolor="white",bbox_inches="tight",pad_inches=0)',
+              '    plt.close(fig)',
+          ])
 
-          bloque_nuevo = '''    # Forzar el render final antes de exportar ambos formatos.
-    fig.canvas.draw()
-
-    # PNG: reemplazar explícitamente el archivo previo y validar el nuevo.
-    salida_png.unlink(missing_ok=True)
-    fig.savefig(salida_png, format="png", dpi=350, facecolor="white", bbox_inches="tight", pad_inches=0)
-    with Image.open(salida_png) as im_png:
-        im_png.verify()
-    png_sha = hashlib.sha256(salida_png.read_bytes()).hexdigest()
-
-    # Copia de previsualización con nombre único por ejecución para evitar caché
-    # en GitHub durante los ajustes de diseño. Solo se conserva la más reciente.
-    for viejo in SALIDA_DIR.glob(f"{salida_png.stem}_rev*.png"):
-        viejo.unlink(missing_ok=True)
-    revision = os.environ.get("GITHUB_RUN_NUMBER", "local")
-    salida_png_revision = SALIDA_DIR / f"{salida_png.stem}_rev{revision}.png"
-    salida_png_revision.write_bytes(salida_png.read_bytes())
-
-    # PDF generado desde exactamente la misma figura y extensión.
-    salida_pdf.unlink(missing_ok=True)
-    fig.savefig(salida_pdf, format="pdf", facecolor="white", bbox_inches="tight", pad_inches=0)
-
-    print(f"Extensión final: X={ax.get_xlim()} Y={ax.get_ylim()}")
-    print(f"PNG SHA256: {png_sha}")
-    print(f"PNG revisión: {salida_png_revision.resolve()}")
-    plt.close(fig)'''
+          bloque_nuevo = "\n".join([
+              '    # Forzar el render final antes de exportar ambos formatos.',
+              '    fig.canvas.draw()',
+              '',
+              '    # PNG: reemplazar explícitamente el archivo previo y validar el nuevo.',
+              '    salida_png.unlink(missing_ok=True)',
+              '    fig.savefig(salida_png, format="png", dpi=350, facecolor="white", bbox_inches="tight", pad_inches=0)',
+              '    with Image.open(salida_png) as im_png:',
+              '        im_png.verify()',
+              '    png_sha = hashlib.sha256(salida_png.read_bytes()).hexdigest()',
+              '',
+              '    # Copia única por ejecución para evitar confundir una previsualización cacheada de GitHub.',
+              '    for viejo in SALIDA_DIR.glob(f"{salida_png.stem}_rev*.png"):',
+              '        viejo.unlink(missing_ok=True)',
+              '    revision = os.environ.get("GITHUB_RUN_NUMBER", "local")',
+              '    salida_png_revision = SALIDA_DIR / f"{salida_png.stem}_rev{revision}.png"',
+              '    salida_png_revision.write_bytes(salida_png.read_bytes())',
+              '',
+              '    # PDF desde exactamente la misma figura y extensión.',
+              '    salida_pdf.unlink(missing_ok=True)',
+              '    fig.savefig(salida_pdf, format="pdf", facecolor="white", bbox_inches="tight", pad_inches=0)',
+              '',
+              '    print(f"Extensión final: X={ax.get_xlim()} Y={ax.get_ylim()}")',
+              '    print(f"PNG SHA256: {png_sha}")',
+              '    print(f"PNG revisión: {salida_png_revision.resolve()}")',
+              '    plt.close(fig)',
+          ])
 
           if "salida_png_revision" not in txt:
               if bloque_anterior not in txt:
@@ -164,7 +156,7 @@ jobs:
               txt = txt.replace(bloque_anterior, bloque_nuevo)
 
           p.write_text(txt, encoding="utf-8")
-          print("Estilo actualizado: zoom adicional + exportación PNG verificada y sin caché ambigua")
+          print("Estilo actualizado: más zoom + PNG regenerado, validado y con copia sin caché")
           PY
 
       - name: Preparar geografía
