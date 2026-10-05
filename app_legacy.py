@@ -56,7 +56,7 @@ AMENAZAS_CORTAS = {
     "Inseguridad alimentaria": "Inseguridad alimentaria",
     "Dengue / otras arbovirosis": "Arbovirosis",
     "Calidad del aire / riesgo respiratorio": "Aire",
-    "Afectación de servicios de salud": "Servicios",
+    "Afectación de servicios de salud": "Afectación servicios",
 }
 
 AMENAZA_CLAVE_ESTATICA = {
@@ -771,7 +771,7 @@ def matriz_amenazas(datos, altura=560):
 
     columnas = [v[0] for v in AMENAZAS.values()]
     nombres = list(AMENAZAS.keys())
-    etiquetas = [("Inseguridad<br>alimentaria" if n == "Inseguridad alimentaria" else AMENAZAS_CORTAS[n]) for n in nombres]
+    etiquetas = [("Inseguridad<br>alimentaria" if n == "Inseguridad alimentaria" else "Afectación<br>servicios" if n == "Afectación de servicios de salud" else AMENAZAS_CORTAS[n]) for n in nombres]
     m = datos.set_index("pais")[columnas].copy()
     m = m.loc[m.sum(axis=1).sort_values(ascending=False).index]
 
