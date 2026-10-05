@@ -108,7 +108,9 @@ def _construir_deck(frame_globals):
     actual = frame_globals["actual"].copy()
     filtrado = frame_globals["filtrado"].copy()
     hay_filtros = bool(frame_globals.get("hay_filtros", False))
-    seleccion = frame_globals.get("amenazas_mapa") or list(AMENAZAS.keys())
+    seleccion = frame_globals.get("amenazas_mapa")
+    if seleccion is None:
+        seleccion = list(AMENAZAS.keys())
 
     cols = ["iso3", "pais", "prioridad", "situacion_predominante"]
     cols += [v[0] for v in AMENAZAS.values()]
@@ -170,9 +172,11 @@ def _construir_deck(frame_globals):
             "tooltip_line3": "",
         })
 
-        inicio_x = x + 1.0 + mapa_ref.DESPLAZAMIENTO_ICONOS_X.get(iso, 0)
-        y_iconos = y + mapa_ref.DESPLAZAMIENTO_ICONOS_Y
-        separacion = 2.45
+        # Los pictogramas quedan justo debajo del nombre, como en el mapa SitRep,
+        # pero con una separación más compacta para evitar cruces entre callouts.
+        inicio_x = x + 0.55 + mapa_ref.DESPLAZAMIENTO_ICONOS_X.get(iso, 0)
+        y_iconos = y - 2.15
+        separacion = 1.95
         for i, (nombre, clave) in enumerate(activas):
             iconos.append({
                 "position": [inicio_x + i * separacion, y_iconos],
@@ -183,7 +187,7 @@ def _construir_deck(frame_globals):
                     "anchorX": 56,
                     "anchorY": 56,
                 },
-                "size": 16,
+                "size": 14,
                 "tooltip_title": nombre_pais,
                 "tooltip_line1": nombre,
                 "tooltip_line2": "Amenaza / impacto reportado",
@@ -230,7 +234,7 @@ def _construir_deck(frame_globals):
                 rutas,
                 get_path="path",
                 get_color=[7, 85, 148, 205],
-                width_min_pixels=1.0,
+                width_min_pixels=0.85,
                 pickable=False,
             )
         )
@@ -241,8 +245,10 @@ def _construir_deck(frame_globals):
                 anclas,
                 get_position="position",
                 get_fill_color=[7, 85, 148, 255],
-                get_radius=2.2,
+                get_radius=0.75,
                 radius_units="pixels",
+                radius_min_pixels=0.75,
+                radius_max_pixels=1.25,
                 pickable=False,
             )
         )
@@ -275,8 +281,8 @@ def _construir_deck(frame_globals):
                 get_size="size",
                 size_units="pixels",
                 size_scale=1,
-                size_min_pixels=12,
-                size_max_pixels=18,
+                size_min_pixels=11,
+                size_max_pixels=15,
                 pickable=True,
             )
         )
@@ -284,7 +290,7 @@ def _construir_deck(frame_globals):
     vista = pdk.ViewState(
         longitude=-76.0,
         latitude=-10.0,
-        zoom=2.18,
+        zoom=2.25,
         pitch=0,
         bearing=0,
     )
@@ -308,9 +314,22 @@ def _construir_deck(frame_globals):
 
     # map_style=None evita el error de pydeck/Streamlit Cloud que exige
     # map_provider='mapbox' cuando se pasa un estilo como diccionario.
+    vista_mapa = pdk.View(
+        type="MapView",
+        controller={
+            "dragPan": False,
+            "dragRotate": False,
+            "scrollZoom": True,
+            "doubleClickZoom": True,
+            "touchZoom": True,
+            "keyboard": False,
+        },
+    )
+
     return pdk.Deck(
         layers=capas,
         initial_view_state=vista,
+        views=[vista_mapa],
         map_style=None,
         tooltip=tooltip,
     )

@@ -950,28 +950,17 @@ k5.metric("Impacto en salud", int(filtrado["impacto_salud_documentado"].apply(es
 section_header("Panorama regional", "Distribución de prioridades y amenazas reportadas")
 
 with st.container(border=True):
-    vm1, vm2 = st.columns([1.25, 2.75], gap="medium")
-    with vm1:
-        modo_mapa = st.radio(
-            "Visualizar",
-            ["Prioridad", "Prioridad + amenazas"],
-            index=1,
-            horizontal=True,
-            key="modo_mapa",
-        )
-    with vm2:
-        if modo_mapa == "Prioridad + amenazas":
-            amenazas_mapa = st.multiselect(
-                "Iconos visibles",
-                list(AMENAZAS.keys()),
-                default=list(AMENAZAS.keys()),
-                format_func=lambda x: AMENAZAS_CORTAS[x],
-                key="amenazas_mapa",
-            )
-        else:
-            amenazas_mapa = []
+    # Una sola vista: prioridad por color + amenazas/impactos mediante callouts.
+    modo_mapa = "Prioridad + amenazas"
+    amenazas_mapa = st.multiselect(
+        "Iconos visibles",
+        list(AMENAZAS.keys()),
+        default=list(AMENAZAS.keys()),
+        format_func=lambda x: AMENAZAS_CORTAS[x],
+        key="amenazas_mapa",
+    )
     st.markdown(
-        '<div class="map-note">El color del país representa la prioridad. En la vista de amenazas se usan los mismos pictogramas vectoriales y callouts del mapa SitRep en PDF/PNG. Los controles solo cambian la visualización del mapa.</div>',
+        '<div class="map-note">El color del país representa el nivel de prioridad. Los pictogramas muestran las amenazas / impactos seleccionados. Puedes hacer zoom y pasar el cursor sobre países e iconos para ver el detalle.</div>',
         unsafe_allow_html=True,
     )
 
