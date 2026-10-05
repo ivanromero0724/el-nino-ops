@@ -362,6 +362,22 @@ def amenazas_de_fila(fila, seleccion=None):
     return salida
 
 
+def resumen_iconos_pais(fila, seleccion=None, max_iconos=2):
+    activas = amenazas_de_fila(fila, seleccion)
+    if not activas:
+        return None, []
+
+    iconos = [icono for _, icono in activas]
+    nombres = [nombre for nombre, _ in activas]
+
+    etiqueta = "".join(iconos[:max_iconos])
+    extra = len(iconos) - max_iconos
+    if extra > 0:
+        etiqueta += f"+{extra}"
+
+    return etiqueta, nombres
+
+
 def posiciones_pais(geo):
     posiciones = dict(POSICIONES_AMENAZAS)
     faltantes = set(geo["ISO_CC"].dropna().astype(str)) - set(posiciones)
@@ -431,49 +447,57 @@ def construir_mapa(
     if mostrar_amenazas:
         if amenazas_visibles is None:
             amenazas_visibles = list(AMENAZAS.keys())
+
         posiciones = posiciones_pais(geo)
-        capas_iconos = {nombre: {"lon": [], "lat": [], "hover": []} for nombre in amenazas_visibles}
+        lon_list, lat_list, text_list, hover_list, size_list = [], [], [], [], []
 
         for _, fila in datos_filtrados.iterrows():
             iso = str(fila.get("iso3", ""))
             if iso not in posiciones:
                 continue
-            activas = amenazas_de_fila(fila, amenazas_visibles)
-            if not activas:
+
+            etiqueta, nombres = resumen_iconos_pais(
+                fila,
+                seleccion=amenazas_visibles,
+                max_iconos=2,
+            )
+            if not etiqueta:
                 continue
 
             lon0, lat0 = posiciones[iso]
-            paso = 1.55
-            for i, (nombre, icono) in enumerate(activas):
-                offset = (i - (len(activas) - 1) / 2) * paso
-                capas_iconos[nombre]["lon"].append(lon0 + offset)
-                capas_iconos[nombre]["lat"].append(lat0)
-                capas_iconos[nombre]["hover"].append(
-                    f"<b>{html.escape(texto(fila.get('pais'), iso))}</b><br>"
-                    f"{icono} {html.escape(nombre)}"
-                )
+            detalle = "<br>".join(
+                f"{AMENAZAS[n][1]} {html.escape(n)}" for n in nombres
+            )
 
-        for nombre in amenazas_visibles:
-            datos_capa = capas_iconos[nombre]
-            if not datos_capa["lon"]:
-                continue
-            _, icono = AMENAZAS[nombre]
+            lon_list.append(lon0)
+            lat_list.append(lat0)
+            text_list.append(etiqueta)
+            hover_list.append(
+                f"<b>{html.escape(texto(fila.get('pais'), iso))}</b><br>{detalle}"
+            )
+            size_list.append(38 if len(nombres) > 2 else 34)
+
+        if lon_list:
             fig.add_trace(
                 go.Scattergeo(
-                    lon=datos_capa["lon"],
-                    lat=datos_capa["lat"],
+                    lon=lon_list,
+                    lat=lat_list,
                     mode="markers+text",
                     marker=dict(
-                        size=28,
-                        color="rgba(255,255,255,.94)",
-                        line=dict(color="rgba(0,75,135,.35)", width=1),
+                        size=size_list,
+                        color="rgba(255,255,255,.97)",
+                        line=dict(color="rgba(0,75,135,.55)", width=1.3),
                     ),
-                    text=[icono] * len(datos_capa["lon"]),
+                    text=text_list,
                     textposition="middle center",
-                    textfont=dict(size=14, color=TEXTO),
-                    hovertext=datos_capa["hover"],
+                    textfont=dict(size=13, color=TEXTO),
+                    hovertext=hover_list,
                     hovertemplate="%{hovertext}<extra></extra>",
-                    hoverlabel=dict(bgcolor="white", font_size=12, font_color=TEXTO),
+                    hoverlabel=dict(
+                        bgcolor="white",
+                        font_size=12,
+                        font_color=TEXTO,
+                    ),
                     showlegend=False,
                 )
             )
@@ -773,7 +797,7 @@ with st.container(border=True):
         else:
             amenazas_mapa = []
     st.markdown(
-        '<div class="map-note">El color del país representa la prioridad. Los iconos muestran amenazas / impactos reportados. Estos controles solo cambian la visualización del mapa.</div>',
+        '<div class="map-note">El color del país representa la prioridad. Cada burbuja resume las amenazas / impactos reportados por país; al pasar el cursor se ve el detalle completo. Estos controles solo cambian la visualización del mapa.</div>',
         unsafe_allow_html=True,
     )
 
