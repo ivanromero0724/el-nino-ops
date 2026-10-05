@@ -279,21 +279,57 @@ def _construir_folium(frame_globals):
             f"""
             <script>
             (function() {{
-                var capa = {nombre_capa_paises};
-                capa.eachLayer(function(layer) {{
-                    if (layer && layer._path) {{
-                        layer._path.setAttribute('tabindex', '-1');
+                var layerName = "{nombre_capa_paises}";
+                var intentos = 0;
+
+                function instalarBloqueoClick() {{
+                    var capa = window[layerName];
+                    if (!capa) {{
+                        if (intentos++ < 80) {{
+                            setTimeout(instalarBloqueoClick, 50);
+                        }}
+                        return;
                     }}
-                    layer.on('click', function(e) {{
-                        if (e && e.originalEvent) {{
-                            e.originalEvent.preventDefault();
-                            e.originalEvent.stopPropagation();
+
+                    capa.eachLayer(function(layer) {{
+                        if (!layer) return;
+
+                        // No hay ninguna acción Leaflet asociada al clic.
+                        layer.off('click');
+
+                        function prepararPath() {{
+                            var path = layer._path;
+                            if (!path) return;
+
+                            path.setAttribute('tabindex', '-1');
+                            path.style.outline = 'none';
+                            path.style.boxShadow = 'none';
+
+                            if (path.dataset.opsClickDisabled === '1') return;
+                            path.dataset.opsClickDisabled = '1';
+
+                            function quitarFoco(ev) {{
+                                if (ev) {{
+                                    ev.preventDefault();
+                                    ev.stopPropagation();
+                                }}
+                                setTimeout(function() {{
+                                    if (path && path.blur) path.blur();
+                                }}, 0);
+                            }}
+
+                            path.addEventListener('click', quitarFoco, true);
+                            path.addEventListener('mouseup', quitarFoco, true);
                         }}
-                        if (layer && layer._path && layer._path.blur) {{
-                            layer._path.blur();
-                        }}
+
+                        prepararPath();
+                        layer.on('add', function() {{
+                            setTimeout(prepararPath, 0);
+                        }});
                     }});
-                }});
+                }}
+
+                setTimeout(instalarBloqueoClick, 0);
             }})();
             </script>
             """
