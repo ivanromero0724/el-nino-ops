@@ -800,20 +800,31 @@ def matriz_amenazas(datos, altura=560):
     )
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=4, t=8, b=104),
+        margin=dict(l=0, r=4, t=8, b=138),
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
-    fig.update_xaxes(side="bottom", tickangle=0, tickfont=dict(size=10), showgrid=False)
+    fig.update_xaxes(side="bottom", showticklabels=False, ticks="", showgrid=False)
     fig.update_yaxes(autorange="reversed", tickfont=dict(size=10), showgrid=False)
     for i, nombre in enumerate(nombres):
         fig.add_layout_image(dict(
             source=amenaza_icon_data_uri(nombre),
             xref="paper", yref="paper",
-            x=(i + .5) / len(nombres), y=-.145,
-            sizex=.060, sizey=.060,
+            x=(i + .5) / len(nombres), y=-.072,
+            sizex=.072, sizey=.072,
             xanchor="center", yanchor="middle", layer="above"
         ))
+        etiqueta = etiquetas[i]
+        fig.add_annotation(
+            x=(i + .5) / len(nombres),
+            y=-.155,
+            xref="paper", yref="paper",
+            text=etiqueta,
+            showarrow=False,
+            xanchor="center", yanchor="top",
+            align="center",
+            font=dict(size=10, color="#6F7589"),
+        )
     return fig
 
 
