@@ -13,6 +13,8 @@ import json
 import sys
 
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
+from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
@@ -93,6 +95,42 @@ def _icono_data_uri(clave, size=64):
     return uri
 
 
+def _label_data_uri(texto):
+    """Rasteriza una etiqueta de país con soporte completo de tildes/ñ."""
+    texto = str(texto or "")
+    cache = getattr(_label_data_uri, "_cache", {})
+    if texto in cache:
+        return cache[texto]
+
+    font_path = font_manager.findfont(
+        font_manager.FontProperties(family="DejaVu Sans", weight="bold")
+    )
+    font = ImageFont.truetype(font_path, 26)
+    tmp = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(tmp)
+    bbox = draw.textbbox((0, 0), texto, font=font)
+    pad_x, pad_y = 5, 4
+    width = max(8, bbox[2] - bbox[0] + 2 * pad_x)
+    height = max(8, bbox[3] - bbox[1] + 2 * pad_y)
+
+    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    draw.text(
+        (pad_x - bbox[0], pad_y - bbox[1]),
+        texto,
+        font=font,
+        fill=(0, 62, 120, 255),
+    )
+
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    uri = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+    resultado = (uri, width, height)
+    cache[texto] = resultado
+    _label_data_uri._cache = cache
+    return resultado
+
+
 def _amenazas_activas(fila, seleccion):
     salida = []
     for nombre in seleccion:
@@ -164,9 +202,17 @@ def _construir_deck(frame_globals):
         x, y, nombre_pais = mapa_ref.LABELS[iso]
         rutas.append({"path": [list(pt) for pt in mapa_ref.ROUTES[iso]]})
         anclas.append({"position": list(mapa_ref.TARGET[iso])})
+        label_uri, label_w, label_h = _label_data_uri(nombre_pais)
         etiquetas.append({
             "position": [x, y],
-            "pais": nombre_pais,
+            "icon": {
+                "url": label_uri,
+                "width": label_w,
+                "height": label_h,
+                "anchorX": 0,
+                "anchorY": label_h / 2,
+            },
+            "size": 18,
             "properties": _props_popup(
                 nombre_pais,
                 "Amenazas / impactos",
@@ -179,7 +225,7 @@ def _construir_deck(frame_globals):
         for i, (nombre, clave) in enumerate(activas):
             iconos.append({
                 "position": [x, y],
-                "pixel_offset": [6 + i * 24, 19],
+                "pixel_offset": [i * 24, 22],
                 "icon": {
                     "url": _icono_data_uri(clave),
                     "width": 112,
@@ -259,22 +305,16 @@ def _construir_deck(frame_globals):
     if etiquetas:
         capas.append(
             pdk.Layer(
-                "TextLayer",
+                "IconLayer",
                 etiquetas,
                 id="etiquetas-paises",
+                get_icon="icon",
                 get_position="position",
-                get_text="pais",
-                get_color=[0, 62, 120, 255],
-                get_size=11,
+                get_size="size",
                 size_units="pixels",
                 size_scale=1,
-                size_min_pixels=10,
-                size_max_pixels=12,
-                get_text_anchor="'start'",
-                get_alignment_baseline="'center'",
-                character_set=list(" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÉÍÓÚÜÑáéíóúüñ"),
-                font_family="Arial, sans-serif",
-                font_weight=700,
+                size_min_pixels=17,
+                size_max_pixels=20,
                 pickable=True,
             )
         )
