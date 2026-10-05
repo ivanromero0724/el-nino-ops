@@ -1,0 +1,52 @@
+name: Ajustar espaciado detalle por país
+
+on:
+  push:
+    paths:
+      - ".github/workflows/ajustar_espaciado_detalle.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  ajustar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Separar filas de tarjetas de detalle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app.py')
+          txt = p.read_text(encoding='utf-8')
+          old = '''        .detail-card {{
+            background:#FFFFFF; border:1px solid {BORDE}; border-radius:14px;
+            padding:.95rem 1.05rem; min-height:158px; height:100%;
+            box-shadow:0 2px 9px rgba(0,75,135,.035);
+        }}'''
+          new = '''        .detail-card {{
+            background:#FFFFFF; border:1px solid {BORDE}; border-radius:14px;
+            padding:.95rem 1.05rem; min-height:158px; height:100%;
+            box-shadow:0 2px 9px rgba(0,75,135,.035);
+            margin-bottom:.85rem;
+        }}'''
+          if old not in txt:
+              raise SystemExit('No se encontró el bloque .detail-card esperado')
+          p.write_text(txt.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Guardar ajuste
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+            exit 0
+          fi
+          git commit -m "Separar tarjetas de detalle por país"
+          git push
