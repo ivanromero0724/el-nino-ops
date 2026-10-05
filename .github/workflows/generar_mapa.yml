@@ -69,15 +69,20 @@ jobs:
                   '    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")\n    ax.add_patch(Rectangle((-124,-58),94,90,facecolor=AZUL_MAR,edgecolor="none",zorder=0))'
               )
 
-          # Logo OPS/OMS más grande y con mayor área disponible.
+          # Logo OPS/OMS mucho más grande y con mayor área disponible.
           txt = txt.replace(
               'ax_logo=fig.add_axes([.735,.035,.165,.135])',
-              'ax_logo=fig.add_axes([.680,.010,.300,.195])'
+              'ax_logo=fig.add_axes([.650,.005,.340,.220])'
           )
-          txt = txt.replace('OffsetImage(logo,zoom=.145)', 'OffsetImage(logo,zoom=.32)')
+          txt = txt.replace(
+              'ax_logo=fig.add_axes([.680,.010,.300,.195])',
+              'ax_logo=fig.add_axes([.650,.005,.340,.220])'
+          )
+          txt = txt.replace('OffsetImage(logo,zoom=.145)', 'OffsetImage(logo,zoom=.50)')
+          txt = txt.replace('OffsetImage(logo,zoom=.32)', 'OffsetImage(logo,zoom=.50)')
 
           p.write_text(txt, encoding="utf-8")
-          print("Estilo actualizado: océano azul + logo OPS/OMS ampliado")
+          print("Estilo actualizado: océano azul + logo OPS/OMS mucho más grande")
           PY
 
       - name: Preparar geografía
@@ -94,6 +99,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
           else
-            git commit -m "Ajustar océano azul y tamaño del logo OPS/OMS"
+            git commit -m "Aumentar tamaño del logo OPS/OMS"
             git push
           fi
