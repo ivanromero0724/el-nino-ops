@@ -54,20 +54,20 @@ if old_chart in txt:
     txt = txt.replace(old_chart, new_chart, 1)
 
 # 3b) Hover robusto sobre países + encuadre inicial México-Sudamérica.
-# Usar una única ruta de tooltip basada en `properties` para GeoJsonLayer,
-# etiquetas e iconos. Así el popup funciona al pasar el cursor sobre el país.
+# En GeoJsonLayer, deck.gl expone las propiedades del feature directamente
+# al tooltip; en IconLayer usamos las mismas claves en el nivel raíz.
 txt = txt.replace(
-    '            **_props_popup(\n                nombre_pais,\n                "Amenazas / impactos",\n                "Pasa el cursor sobre los pictogramas para ver el detalle.",\n            ),',
     '            "properties": _props_popup(\n                nombre_pais,\n                "Amenazas / impactos",\n                "Pasa el cursor sobre los pictogramas para ver el detalle.",\n            ),',
+    '            **_props_popup(\n                nombre_pais,\n                "Amenazas / impactos",\n                "Pasa el cursor sobre los pictogramas para ver el detalle.",\n            ),',
 )
 txt = txt.replace(
-    '                **_props_popup(\n                    nombre_pais,\n                    nombre,\n                    "Amenaza / impacto reportado",\n                ),',
     '                "properties": _props_popup(\n                    nombre_pais,\n                    nombre,\n                    "Amenaza / impacto reportado",\n                ),',
+    '                **_props_popup(\n                    nombre_pais,\n                    nombre,\n                    "Amenaza / impacto reportado",\n                ),',
 )
-txt = txt.replace('{tooltip_title}', '{properties.tooltip_title}')
-txt = txt.replace('{tooltip_line1}', '{properties.tooltip_line1}')
-txt = txt.replace('{tooltip_line2}', '{properties.tooltip_line2}')
-txt = txt.replace('{tooltip_line3}', '{properties.tooltip_line3}')
+txt = txt.replace('{properties.tooltip_title}', '{tooltip_title}')
+txt = txt.replace('{properties.tooltip_line1}', '{tooltip_line1}')
+txt = txt.replace('{properties.tooltip_line2}', '{tooltip_line2}')
+txt = txt.replace('{properties.tooltip_line3}', '{tooltip_line3}')
 
 # Resumir la situación del país en el popup para evitar tarjetas demasiado largas.
 old_situacion = '''    mapa["tooltip_line3"] = mapa["situacion_predominante"].fillna(
@@ -85,9 +85,9 @@ new_situacion = '''    situacion_popup = mapa["situacion_predominante"].fillna(
 if old_situacion in txt:
     txt = txt.replace(old_situacion, new_situacion, 1)
 
-# Vista inicial pensada para mostrar completa la región desde México hasta
-# el extremo sur de Sudamérica, sin desperdiciar espacio en Norteamérica.
-txt = txt.replace(
+# Vista inicial más abierta para que se vea completa desde México hasta
+# Tierra del Fuego dentro del panel, sin priorizar EE. UU./Canadá.
+for old_view in (
     '''        longitude=-76.0,
         latitude=-10.0,
         zoom=2.25,
@@ -98,11 +98,26 @@ txt = txt.replace(
         zoom=2.05,
         min_zoom=1.85,
         max_zoom=5.25,''',
+):
+    if old_view in txt:
+        txt = txt.replace(
+            old_view,
+            '''        longitude=-76.0,
+        latitude=-13.5,
+        zoom=1.72,
+        min_zoom=1.45,
+        max_zoom=5.25,''',
+            1,
+        )
+
+txt = txt.replace(
+    '"maxBounds": [[-123.0, -60.0], [-30.0, 34.0]],',
+    '"maxBounds": [[-122.0, -62.0], [-30.0, 35.0]],',
     1,
 )
 txt = txt.replace(
     '"maxBounds": [[-130.0, -62.0], [-28.0, 43.0]],',
-    '"maxBounds": [[-123.0, -60.0], [-30.0, 34.0]],',
+    '"maxBounds": [[-122.0, -62.0], [-30.0, 35.0]],',
     1,
 )
 
