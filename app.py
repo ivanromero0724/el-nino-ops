@@ -308,10 +308,25 @@ def _construir_folium(frame_globals):
         if iso not in mapa_ref.LABELS or iso not in mapa_ref.ROUTES or iso not in mapa_ref.TARGET:
             continue
 
-        x, y, nombre_pais = mapa_ref.LABELS[iso]
-        ruta = [(lat, lon) for lon, lat in mapa_ref.ROUTES[iso]]
+        _, _, nombre_pais = mapa_ref.LABELS[iso]
+        ruta_lonlat = list(mapa_ref.ROUTES[iso])
+        ruta = [(lat, lon) for lon, lat in ruta_lonlat]
         target_lon, target_lat = mapa_ref.TARGET[iso]
         activas = _amenazas_activas(fila, seleccion)
+
+        # El primer punto de cada ruta ya está diseñado como punto exterior
+        # del callout. Usarlo como borde del bloque evita que los pictogramas
+        # se proyecten sobre el país y garantiza que la línea salga desde el
+        # borde del callout, sin atravesar los iconos.
+        callout_lon, callout_lat = ruta_lonlat[0]
+        callout_a_la_izquierda = callout_lon < target_lon
+
+        ancho_por_iconos = len(activas) * 30 + 8
+        ancho_por_nombre = max(90, len(nombre_pais) * 7 + 12)
+        ancho_callout = min(230, max(120, ancho_por_iconos, ancho_por_nombre))
+        anchor_x = ancho_callout if callout_a_la_izquierda else 0
+        alineacion = "right" if callout_a_la_izquierda else "left"
+        justificar = "flex-end" if callout_a_la_izquierda else "flex-start"
 
         folium.PolyLine(
             ruta,
@@ -334,26 +349,29 @@ def _construir_folium(frame_globals):
 
         imgs = "".join(
             f'<img src="{_icono_data_uri(clave)}" '
-            f'style="width:27px;height:27px;object-fit:contain;margin-right:2px;vertical-align:middle;">'
+            f'style="width:27px;height:27px;object-fit:contain;vertical-align:middle;">'
             for _, clave in activas
         )
         bloque_iconos = (
-            f'<div style="display:flex;gap:1px;align-items:center;margin-top:2px;">{imgs}</div>'
+            f'<div class="ops-callout-icons" data-iso="{html.escape(iso)}" '
+            f'style="display:flex;gap:3px;align-items:center;justify-content:{justificar};'
+            f'margin-top:3px;width:{ancho_callout}px;">{imgs}</div>'
             if imgs else ""
         )
         label_html = (
-            '<div style="white-space:nowrap;pointer-events:none;'
-            'font-family:Arial,sans-serif;color:#004B87;">'
+            f'<div class="ops-callout" data-iso="{html.escape(iso)}" '
+            f'style="width:{ancho_callout}px;white-space:nowrap;pointer-events:none;'
+            f'font-family:Arial,sans-serif;color:#004B87;text-align:{alineacion};">'
             f'<div style="font-size:12px;font-weight:700;line-height:1.05;">{html.escape(nombre_pais)}</div>'
             f'{bloque_iconos}'
             '</div>'
         )
 
         folium.Marker(
-            location=[y, x],
+            location=[callout_lat, callout_lon],
             icon=DivIcon(
-                icon_size=(180, 52),
-                icon_anchor=(0, 13),
+                icon_size=(ancho_callout, 55),
+                icon_anchor=(anchor_x, 13),
                 html=label_html,
             ),
             interactive=False,
