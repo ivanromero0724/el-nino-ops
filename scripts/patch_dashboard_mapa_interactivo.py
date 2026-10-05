@@ -195,10 +195,15 @@ legacy = legacy.replace(
     1,
 )
 
-# 9) Aumentar el tamaño de los pictogramas bajo la matriz.
+# 9) Aumentar un poco más el tamaño de los pictogramas bajo la matriz.
 legacy = legacy.replace(
     '            sizex=.038, sizey=.038,\n',
+    '            sizex=.060, sizey=.060,\n',
+    1,
+)
+legacy = legacy.replace(
     '            sizex=.052, sizey=.052,\n',
+    '            sizex=.060, sizey=.060,\n',
     1,
 )
 
