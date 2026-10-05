@@ -174,5 +174,12 @@ legacy = legacy.replace('    "Sequía / agua": "Agua",', '    "Sequía / agua": 
 legacy = legacy.replace('    "Inundaciones / lluvias": "Lluvias",', '    "Inundaciones / lluvias": "Inundaciones",')
 legacy = legacy.replace('    "Inseguridad alimentaria": "Alimentos",', '    "Inseguridad alimentaria": "Inseguridad alimentaria",')
 
+# 7) En la matriz, partir el rótulo largo en dos líneas para que no se amontone.
+legacy = legacy.replace(
+    '    etiquetas = [AMENAZAS_CORTAS[n] for n in nombres]\n',
+    '    etiquetas = [("Inseguridad<br>alimentaria" if n == "Inseguridad alimentaria" else AMENAZAS_CORTAS[n]) for n in nombres]\n',
+    1,
+)
+
 p.write_text(legacy, encoding="utf-8")
-print("OK: selector y nombres resumidos de amenazas / impactos actualizados")
+print("OK: selector, nombres resumidos y salto de línea de inseguridad alimentaria actualizados")
