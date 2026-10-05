@@ -8,7 +8,7 @@ on:
       - "scripts/mapa_sitrep.py"
       - "scripts/preparar_geografia.py"
       - "assets/ops_oms.png"
-      - "assets/logo_payload/**"
+      - "assets/logo_payload_final/**"
       - "requirements.txt"
       - ".github/workflows/generar_mapa.yml"
 
@@ -35,14 +35,22 @@ jobs:
 
       - name: Reconstruir y validar logo OPS/OMS
         run: |
-          cat assets/logo_payload/current*.b64 | tr -d '\n\r ' | base64 --decode > assets/ops_oms.png
+          base64 --decode assets/logo_payload_final/logo.b64 > assets/ops_oms.png
           python - <<'PY'
+          from pathlib import Path
+          import hashlib
           from PIL import Image
-          p = "assets/ops_oms.png"
+
+          p = Path("assets/ops_oms.png")
+          digest = hashlib.sha256(p.read_bytes()).hexdigest()
+          esperado = "a9e2685bf6ae716326b8ca8c698d2080ea2d51d47a49690cf4099bb46c4c8061"
+          if digest != esperado:
+              raise RuntimeError(f"SHA256 inesperado para el logo: {digest}")
+
           im = Image.open(p)
           im.verify()
           im = Image.open(p)
-          print("Logo válido:", p, im.size, im.mode)
+          print("Logo válido:", p, im.size, im.mode, digest)
           PY
 
       - name: Preparar geografía
