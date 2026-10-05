@@ -220,6 +220,8 @@ def _construir_folium(frame_globals):
         folium.Element(
             "<style>"
             ".leaflet-container{background:#D9EEF7!important;}"
+            ".leaflet-interactive:focus,"
+            ".leaflet-interactive:focus-visible{outline:none!important;box-shadow:none!important;}"
             ".leaflet-tooltip.ops-tooltip{"
             "background:white;border:1px solid #D9E6EE;border-radius:9px;"
             "box-shadow:0 4px 16px rgba(0,0,0,.14);color:#17324D;"
@@ -268,6 +270,35 @@ def _construir_folium(frame_globals):
         ),
     )
     capa_paises.add_to(m)
+
+    # Mantener hover, pero evitar cualquier efecto visual/acción al hacer clic
+    # sobre un país (Leaflet/SVG puede dejar un rectángulo de foco azul).
+    nombre_capa_paises = capa_paises.get_name()
+    m.get_root().script.add_child(
+        folium.Element(
+            f"""
+            <script>
+            (function() {{
+                var capa = {nombre_capa_paises};
+                capa.eachLayer(function(layer) {{
+                    if (layer && layer._path) {{
+                        layer._path.setAttribute('tabindex', '-1');
+                    }}
+                    layer.on('click', function(e) {{
+                        if (e && e.originalEvent) {{
+                            e.originalEvent.preventDefault();
+                            e.originalEvent.stopPropagation();
+                        }}
+                        if (layer && layer._path && layer._path.blur) {{
+                            layer._path.blur();
+                        }}
+                    }});
+                }});
+            }})();
+            </script>
+            """
+        )
+    )
 
     # Callouts e iconos seleccionados. Se dibujan encima de los polígonos.
     for _, fila in filtrado.iterrows():
