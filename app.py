@@ -1,9 +1,8 @@
 """Entrada Streamlit para el dashboard de El Niño OPS/OMS.
 
 El dashboard visual original se conserva en ``app_legacy.py``. Esta entrada
-intercepta únicamente el render estático de "Prioridad + amenazas" y lo
-reemplaza por un mapa deck.gl interactivo con los mismos pictogramas del mapa
-SitRep PDF/PNG, callouts y tooltips al pasar el cursor.
+intercepta el render del mapa regional y lo reemplaza por un mapa deck.gl
+interactivo con prioridad, pictogramas SitRep, callouts y tooltips.
 """
 
 from io import BytesIO
@@ -47,7 +46,7 @@ def _hex_rgba(valor, alpha=255):
 
 
 def _icono_data_uri(clave, size=64):
-    """Rasteriza el pictograma SitRep sin recortar su contorno circular."""
+    """Rasteriza el pictograma SitRep completo, circular y sin recorte."""
     draw_size = 64
     cache_key = (clave, draw_size)
     cache = getattr(_icono_data_uri, "_cache", {})
@@ -103,6 +102,16 @@ def _amenazas_activas(fila, seleccion):
     return salida
 
 
+def _props_popup(titulo, linea1="", linea2="", linea3=""):
+    """Estructura uniforme para hover/click en todas las capas."""
+    return {
+        "tooltip_title": str(titulo or ""),
+        "tooltip_line1": str(linea1 or ""),
+        "tooltip_line2": str(linea2 or ""),
+        "tooltip_line3": str(linea3 or ""),
+    }
+
+
 def _construir_deck(frame_globals):
     geo = frame_globals["geo"].copy()
     actual = frame_globals["actual"].copy()
@@ -139,12 +148,6 @@ def _construir_deck(frame_globals):
         "Sin hallazgos priorizados en este SitRep"
     )
     geojson = json.loads(mapa.to_json())
-    # Duplicar campos de tooltip al nivel superior del Feature para que
-    # el mismo template funcione en GeoJsonLayer, TextLayer e IconLayer.
-    for feature in geojson.get("features", []):
-        props = feature.get("properties", {})
-        for key in ("tooltip_title", "tooltip_line1", "tooltip_line2", "tooltip_line3"):
-            feature[key] = props.get(key, "")
 
     rutas = []
     anclas = []
@@ -166,20 +169,19 @@ def _construir_deck(frame_globals):
         etiquetas.append({
             "position": [x, y],
             "pais": nombre_pais,
-            "tooltip_title": nombre_pais,
-            "tooltip_line1": "Amenazas / impactos",
-            "tooltip_line2": "Pasa el cursor sobre los pictogramas para ver el detalle.",
-            "tooltip_line3": "",
+            "properties": _props_popup(
+                nombre_pais,
+                "Amenazas / impactos",
+                "Pasa el cursor sobre los pictogramas para ver el detalle.",
+            ),
         })
 
-        # Los pictogramas quedan justo debajo del nombre, como en el mapa SitRep,
-        # pero con una separación más compacta para evitar cruces entre callouts.
-        inicio_x = x + 0.55 + mapa_ref.DESPLAZAMIENTO_ICONOS_X.get(iso, 0)
-        y_iconos = y - 2.15
-        separacion = 1.95
+        # Todos los iconos comparten la coordenada del nombre y se separan en
+        # píxeles. Esto los mantiene pegados al callout al hacer zoom/pan.
         for i, (nombre, clave) in enumerate(activas):
             iconos.append({
-                "position": [inicio_x + i * separacion, y_iconos],
+                "position": [x, y],
+                "pixel_offset": [3 + i * 17, 14],
                 "icon": {
                     "url": _icono_data_uri(clave),
                     "width": 112,
@@ -188,13 +190,13 @@ def _construir_deck(frame_globals):
                     "anchorY": 56,
                 },
                 "size": 14,
-                "tooltip_title": nombre_pais,
-                "tooltip_line1": nombre,
-                "tooltip_line2": "Amenaza / impacto reportado",
-                "tooltip_line3": "",
+                "properties": _props_popup(
+                    nombre_pais,
+                    nombre,
+                    "Amenaza / impacto reportado",
+                ),
             })
 
-    # Fondo azul propio. Así no dependemos de Mapbox, Carto ni de tokens externos.
     fondo_oceano = [{
         "polygon": [
             [-180.0, -85.0],
@@ -208,6 +210,7 @@ def _construir_deck(frame_globals):
         pdk.Layer(
             "PolygonLayer",
             fondo_oceano,
+            id="oceano",
             get_polygon="polygon",
             get_fill_color=[217, 238, 247, 255],
             stroked=False,
@@ -216,6 +219,7 @@ def _construir_deck(frame_globals):
         pdk.Layer(
             "GeoJsonLayer",
             geojson,
+            id="paises",
             stroked=True,
             filled=True,
             pickable=True,
@@ -223,7 +227,7 @@ def _construir_deck(frame_globals):
             get_fill_color="properties.fill_color",
             get_line_color=[255, 255, 255, 255],
             line_width_min_pixels=0.8,
-            highlight_color=[255, 255, 255, 55],
+            highlight_color=[255, 255, 255, 70],
         ),
     ]
 
@@ -232,6 +236,7 @@ def _construir_deck(frame_globals):
             pdk.Layer(
                 "PathLayer",
                 rutas,
+                id="callouts",
                 get_path="path",
                 get_color=[7, 85, 148, 205],
                 width_min_pixels=0.85,
@@ -243,12 +248,13 @@ def _construir_deck(frame_globals):
             pdk.Layer(
                 "ScatterplotLayer",
                 anclas,
+                id="anclas",
                 get_position="position",
                 get_fill_color=[7, 85, 148, 255],
-                get_radius=0.75,
+                get_radius=0.65,
                 radius_units="pixels",
-                radius_min_pixels=0.75,
-                radius_max_pixels=1.25,
+                radius_min_pixels=0.65,
+                radius_max_pixels=0.95,
                 pickable=False,
             )
         )
@@ -257,6 +263,7 @@ def _construir_deck(frame_globals):
             pdk.Layer(
                 "TextLayer",
                 etiquetas,
+                id="etiquetas-paises",
                 get_position="position",
                 get_text="pais",
                 get_color=[0, 62, 120, 255],
@@ -267,6 +274,8 @@ def _construir_deck(frame_globals):
                 size_max_pixels=10,
                 get_text_anchor="'start'",
                 get_alignment_baseline="'center'",
+                character_set="auto",
+                font_family="Arial, sans-serif",
                 font_weight=700,
                 pickable=True,
             )
@@ -276,8 +285,10 @@ def _construir_deck(frame_globals):
             pdk.Layer(
                 "IconLayer",
                 iconos,
+                id="iconos-amenazas",
                 get_icon="icon",
                 get_position="position",
+                get_pixel_offset="pixel_offset",
                 get_size="size",
                 size_units="pixels",
                 size_scale=1,
@@ -291,16 +302,19 @@ def _construir_deck(frame_globals):
         longitude=-76.0,
         latitude=-10.0,
         zoom=2.25,
+        min_zoom=2.0,
+        max_zoom=5.25,
         pitch=0,
         bearing=0,
     )
+
     tooltip = {
         "html": (
-            "<div style='font-family:Arial,sans-serif;max-width:340px'>"
-            "<b style='color:#004B87'>{tooltip_title}</b><br>"
-            "{tooltip_line1}<br>"
-            "{tooltip_line2}<br>"
-            "<span style='color:#60788A'>{tooltip_line3}</span>"
+            "<div style='font-family:Arial,sans-serif;max-width:360px;line-height:1.35'>"
+            "<b style='color:#004B87;font-size:13px'>{properties.tooltip_title}</b><br>"
+            "{properties.tooltip_line1}<br>"
+            "{properties.tooltip_line2}<br>"
+            "<span style='color:#60788A'>{properties.tooltip_line3}</span>"
             "</div>"
         ),
         "style": {
@@ -309,21 +323,25 @@ def _construir_deck(frame_globals):
             "fontSize": "12px",
             "border": "1px solid #D9E6EE",
             "borderRadius": "8px",
+            "boxShadow": "0 4px 16px rgba(0,0,0,.12)",
         },
     }
 
-    # map_style=None evita el error de pydeck/Streamlit Cloud que exige
-    # map_provider='mapbox' cuando se pasa un estilo como diccionario.
+    # Pan y zoom habilitados, pero acotados a las Américas.
     vista_mapa = pdk.View(
         type="MapView",
         controller={
-            "dragPan": False,
+            "dragPan": True,
             "dragRotate": False,
             "scrollZoom": True,
             "doubleClickZoom": True,
             "touchZoom": True,
-            "keyboard": False,
+            "keyboard": True,
+            "maxBounds": [[-130.0, -62.0], [-28.0, 43.0]],
+            "maxBoundsPadding": 0,
+            "rubberBand": False,
         },
+        repeat=False,
     )
 
     return pdk.Deck(
@@ -333,6 +351,49 @@ def _construir_deck(frame_globals):
         map_style=None,
         tooltip=tooltip,
     )
+
+
+def _mostrar_seleccion_mapa(evento):
+    """Muestra una ficha persistente al hacer clic sobre país/icono/etiqueta."""
+    if evento is None:
+        return
+    try:
+        seleccion = evento.selection
+        objetos = seleccion.get("objects", {}) if seleccion else {}
+    except Exception:
+        return
+
+    elegido = None
+    # Priorizar país; si no, aceptar icono o etiqueta.
+    for layer_id in ("paises", "iconos-amenazas", "etiquetas-paises"):
+        candidatos = objetos.get(layer_id, []) if isinstance(objetos, dict) else []
+        if candidatos:
+            elegido = candidatos[0]
+            break
+    if not elegido:
+        return
+
+    props = elegido.get("properties", {}) if isinstance(elegido, dict) else {}
+    if not props:
+        return
+
+    titulo = props.get("tooltip_title", "")
+    l1 = props.get("tooltip_line1", "")
+    l2 = props.get("tooltip_line2", "")
+    l3 = props.get("tooltip_line3", "")
+    if titulo:
+        st.markdown(
+            f"""
+            <div style="margin-top:.45rem;padding:.72rem .9rem;border:1px solid #D9E6EE;
+                        border-radius:10px;background:#F8FBFD;color:#17324D;">
+                <div style="font-weight:700;color:#004B87;margin-bottom:.18rem;">{titulo}</div>
+                <div>{l1}</div>
+                <div>{l2}</div>
+                <div style="color:#60788A;font-size:.9rem;">{l3}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 # Streamlit conserva el módulo entre reruns: guardar la función original una sola vez.
@@ -349,7 +410,16 @@ def _pyplot_interactivo(fig=None, *args, **kwargs):
     ):
         try:
             deck = _construir_deck(g)
-            return st.pydeck_chart(deck, use_container_width=True, height=690)
+            evento = st.pydeck_chart(
+                deck,
+                use_container_width=True,
+                height=690,
+                on_select="rerun",
+                selection_mode="single-object",
+                key="mapa-regional-elnino",
+            )
+            _mostrar_seleccion_mapa(evento)
+            return evento
         except Exception as exc:
             st.warning(f"No fue posible cargar la capa interactiva de amenazas: {exc}")
     return _ORIGINAL_PYPLOT(fig, *args, **kwargs)
