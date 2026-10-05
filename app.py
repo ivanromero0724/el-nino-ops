@@ -182,9 +182,13 @@ def _construir_deck(frame_globals):
     mapa["tooltip_title"] = mapa["pais"].fillna(mapa["COUNTRY"])
     mapa["tooltip_line1"] = "Prioridad: " + mapa["prioridad_mapa"].astype(str)
     mapa["tooltip_line2"] = mapa.apply(lambda r: "Amenazas / impactos: " + amenazas_texto(r), axis=1)
-    mapa["tooltip_line3"] = mapa["situacion_predominante"].fillna(
+    situacion_popup = mapa["situacion_predominante"].fillna(
         "Sin hallazgos priorizados en este SitRep"
+    ).astype(str)
+    situacion_popup = situacion_popup.apply(
+        lambda s: s if len(s) <= 210 else s[:207].rstrip() + "..."
     )
+    mapa["tooltip_line3"] = "Situación: " + situacion_popup
     geojson = json.loads(mapa.to_json())
     # Duplicar campos del popup al nivel raíz del Feature para que el hover
     # funcione de forma uniforme en GeoJsonLayer e IconLayer.
@@ -219,7 +223,7 @@ def _construir_deck(frame_globals):
                 "anchorY": label_h / 2,
             },
             "size": 13,
-            **_props_popup(
+            "properties": _props_popup(
                 nombre_pais,
                 "Amenazas / impactos",
                 "Pasa el cursor sobre los pictogramas para ver el detalle.",
@@ -240,7 +244,7 @@ def _construir_deck(frame_globals):
                     "anchorY": 56,
                 },
                 "size": 20,
-                **_props_popup(
+                "properties": _props_popup(
                     nombre_pais,
                     nombre,
                     "Amenaza / impacto reportado",
@@ -343,10 +347,10 @@ def _construir_deck(frame_globals):
         )
 
     vista = pdk.ViewState(
-        longitude=-76.0,
-        latitude=-10.0,
-        zoom=2.25,
-        min_zoom=2.0,
+        longitude=-76.5,
+        latitude=-13.0,
+        zoom=2.05,
+        min_zoom=1.85,
         max_zoom=5.25,
         pitch=0,
         bearing=0,
@@ -355,10 +359,10 @@ def _construir_deck(frame_globals):
     tooltip = {
         "html": (
             "<div style='font-family:Arial,sans-serif;max-width:360px;line-height:1.35'>"
-            "<b style='color:#004B87;font-size:13px'>{tooltip_title}</b><br>"
-            "{tooltip_line1}<br>"
-            "{tooltip_line2}<br>"
-            "<span style='color:#60788A'>{tooltip_line3}</span>"
+            "<b style='color:#004B87;font-size:13px'>{properties.tooltip_title}</b><br>"
+            "{properties.tooltip_line1}<br>"
+            "{properties.tooltip_line2}<br>"
+            "<span style='color:#60788A'>{properties.tooltip_line3}</span>"
             "</div>"
         ),
         "style": {
@@ -381,7 +385,7 @@ def _construir_deck(frame_globals):
             "doubleClickZoom": True,
             "touchZoom": True,
             "keyboard": True,
-            "maxBounds": [[-130.0, -62.0], [-28.0, 43.0]],
+            "maxBounds": [[-123.0, -60.0], [-30.0, 34.0]],
             "maxBoundsPadding": 0,
             "rubberBand": False,
         },
