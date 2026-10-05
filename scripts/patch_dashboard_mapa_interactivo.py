@@ -53,6 +53,59 @@ new_chart = '''            return st.pydeck_chart(
 if old_chart in txt:
     txt = txt.replace(old_chart, new_chart, 1)
 
+# 3b) Hover robusto sobre países + encuadre inicial México-Sudamérica.
+# Usar una única ruta de tooltip basada en `properties` para GeoJsonLayer,
+# etiquetas e iconos. Así el popup funciona al pasar el cursor sobre el país.
+txt = txt.replace(
+    '            **_props_popup(\n                nombre_pais,\n                "Amenazas / impactos",\n                "Pasa el cursor sobre los pictogramas para ver el detalle.",\n            ),',
+    '            "properties": _props_popup(\n                nombre_pais,\n                "Amenazas / impactos",\n                "Pasa el cursor sobre los pictogramas para ver el detalle.",\n            ),',
+)
+txt = txt.replace(
+    '                **_props_popup(\n                    nombre_pais,\n                    nombre,\n                    "Amenaza / impacto reportado",\n                ),',
+    '                "properties": _props_popup(\n                    nombre_pais,\n                    nombre,\n                    "Amenaza / impacto reportado",\n                ),',
+)
+txt = txt.replace('{tooltip_title}', '{properties.tooltip_title}')
+txt = txt.replace('{tooltip_line1}', '{properties.tooltip_line1}')
+txt = txt.replace('{tooltip_line2}', '{properties.tooltip_line2}')
+txt = txt.replace('{tooltip_line3}', '{properties.tooltip_line3}')
+
+# Resumir la situación del país en el popup para evitar tarjetas demasiado largas.
+old_situacion = '''    mapa["tooltip_line3"] = mapa["situacion_predominante"].fillna(
+        "Sin hallazgos priorizados en este SitRep"
+    )
+'''
+new_situacion = '''    situacion_popup = mapa["situacion_predominante"].fillna(
+        "Sin hallazgos priorizados en este SitRep"
+    ).astype(str)
+    situacion_popup = situacion_popup.apply(
+        lambda s: s if len(s) <= 210 else s[:207].rstrip() + "..."
+    )
+    mapa["tooltip_line3"] = "Situación: " + situacion_popup
+'''
+if old_situacion in txt:
+    txt = txt.replace(old_situacion, new_situacion, 1)
+
+# Vista inicial pensada para mostrar completa la región desde México hasta
+# el extremo sur de Sudamérica, sin desperdiciar espacio en Norteamérica.
+txt = txt.replace(
+    '''        longitude=-76.0,
+        latitude=-10.0,
+        zoom=2.25,
+        min_zoom=2.0,
+        max_zoom=5.25,''',
+    '''        longitude=-76.5,
+        latitude=-13.0,
+        zoom=2.05,
+        min_zoom=1.85,
+        max_zoom=5.25,''',
+    1,
+)
+txt = txt.replace(
+    '"maxBounds": [[-130.0, -62.0], [-28.0, 43.0]],',
+    '"maxBounds": [[-123.0, -60.0], [-30.0, 34.0]],',
+    1,
+)
+
 p.write_text(txt, encoding="utf-8")
 
 # ============================================================
