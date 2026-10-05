@@ -21,22 +21,15 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          p = Path('app.py')
-          txt = p.read_text(encoding='utf-8')
-          old = '''        .detail-card {{
-            background:#FFFFFF; border:1px solid {BORDE}; border-radius:14px;
-            padding:.95rem 1.05rem; min-height:158px; height:100%;
-            box-shadow:0 2px 9px rgba(0,75,135,.035);
-        }}'''
-          new = '''        .detail-card {{
-            background:#FFFFFF; border:1px solid {BORDE}; border-radius:14px;
-            padding:.95rem 1.05rem; min-height:158px; height:100%;
-            box-shadow:0 2px 9px rgba(0,75,135,.035);
-            margin-bottom:.85rem;
-        }}'''
-          if old not in txt:
-              raise SystemExit('No se encontró el bloque .detail-card esperado')
-          p.write_text(txt.replace(old, new, 1), encoding='utf-8')
+          p = Path("app.py")
+          txt = p.read_text(encoding="utf-8")
+          needle = "            box-shadow:0 2px 9px rgba(0,75,135,.035);\n"
+          addition = needle + "            margin-bottom:.85rem;\n"
+          if "margin-bottom:.85rem;" not in txt:
+              if needle not in txt:
+                  raise RuntimeError("No se encontró la regla de sombra de detail-card")
+              txt = txt.replace(needle, addition, 1)
+              p.write_text(txt, encoding="utf-8")
           PY
 
       - name: Guardar ajuste
@@ -45,8 +38,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app.py
           if git diff --cached --quiet; then
-            echo "Sin cambios"
-            exit 0
+            echo "No hay cambios para guardar."
+          else
+            git commit -m "Separar tarjetas de detalle por país"
+            git push
           fi
-          git commit -m "Separar tarjetas de detalle por país"
-          git push
