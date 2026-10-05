@@ -160,8 +160,6 @@ def _construir_deck(frame_globals):
             continue
 
         activas = _amenazas_activas(fila, seleccion)
-        if not activas:
-            continue
 
         x, y, nombre_pais = mapa_ref.LABELS[iso]
         rutas.append({"path": [list(pt) for pt in mapa_ref.ROUTES[iso]]})
@@ -181,7 +179,7 @@ def _construir_deck(frame_globals):
         for i, (nombre, clave) in enumerate(activas):
             iconos.append({
                 "position": [x, y],
-                "pixel_offset": [3 + i * 17, 14],
+                "pixel_offset": [6 + i * 24, 19],
                 "icon": {
                     "url": _icono_data_uri(clave),
                     "width": 112,
@@ -189,7 +187,7 @@ def _construir_deck(frame_globals):
                     "anchorX": 56,
                     "anchorY": 56,
                 },
-                "size": 14,
+                "size": 20,
                 "properties": _props_popup(
                     nombre_pais,
                     nombre,
@@ -267,14 +265,14 @@ def _construir_deck(frame_globals):
                 get_position="position",
                 get_text="pais",
                 get_color=[0, 62, 120, 255],
-                get_size=9,
+                get_size=11,
                 size_units="pixels",
                 size_scale=1,
-                size_min_pixels=8,
-                size_max_pixels=10,
+                size_min_pixels=10,
+                size_max_pixels=12,
                 get_text_anchor="'start'",
                 get_alignment_baseline="'center'",
-                character_set="auto",
+                character_set=list(" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÉÍÓÚÜÑáéíóúüñ"),
                 font_family="Arial, sans-serif",
                 font_weight=700,
                 pickable=True,
@@ -292,8 +290,8 @@ def _construir_deck(frame_globals):
                 get_size="size",
                 size_units="pixels",
                 size_scale=1,
-                size_min_pixels=11,
-                size_max_pixels=15,
+                size_min_pixels=18,
+                size_max_pixels=22,
                 pickable=True,
             )
         )
