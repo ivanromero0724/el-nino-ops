@@ -1,0 +1,326 @@
+name: Mejorar mapa con amenazas
+
+on:
+  push:
+    paths:
+      - ".github/workflows/mejorar_mapa_amenazas.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  ajustar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Incorporar capa interactiva de amenazas
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("app.py")
+          txt = p.read_text(encoding="utf-8")
+
+          # 1) Posiciones cartográficas ajustadas para los iconos.
+          anchor = '''AMENAZAS_CORTAS = {
+              "Sequía / agua": "Agua",
+              "Inundaciones / lluvias": "Lluvias",
+              "Incendios / quemadas": "Incendios",
+              "Inseguridad alimentaria": "Alimentos",
+              "Dengue / otras arbovirosis": "Arbovirosis",
+              "Calidad del aire / riesgo respiratorio": "Aire",
+              "Afectación de servicios de salud": "Servicios",
+          }
+          '''
+          insertion = anchor + '''
+          # Posiciones de referencia para evitar solapamientos en países pequeños.
+          # Para cualquier país no incluido aquí se usa un punto representativo
+          # calculado a partir de su geometría.
+          POSICIONES_AMENAZAS = {
+              "MEX": (-102.0, 24.0),
+              "GTM": (-91.4, 16.4),
+              "HND": (-86.7, 15.2),
+              "SLV": (-89.1, 13.6),
+              "CRI": (-84.3, 9.7),
+              "PAN": (-80.6, 8.7),
+              "JAM": (-77.2, 18.3),
+              "PRI": (-66.4, 18.2),
+              "TTO": (-61.2, 10.7),
+              "COL": (-74.0, 4.7),
+              "ECU": (-78.3, -1.3),
+              "PER": (-75.2, -9.2),
+              "BOL": (-64.8, -16.6),
+              "BRA": (-52.0, -10.0),
+              "CHL": (-71.0, -29.0),
+              "ARG": (-64.0, -34.0),
+              "URY": (-56.0, -32.8),
+              "PRY": (-58.4, -23.4),
+              "USA": (-98.0, 31.0),
+          }
+          '''
+          if "POSICIONES_AMENAZAS" not in txt:
+              if anchor not in txt:
+                  raise RuntimeError("No se encontró AMENAZAS_CORTAS")
+              txt = txt.replace(anchor, insertion, 1)
+
+          # 2) Estilo para la nota de controles del mapa.
+          css_anchor = '''        .filter-note {{
+              color:#728596;
+              font-size:.78rem;
+              line-height:1.4;
+              margin-top:.35rem;
+              margin-bottom:1rem;
+              padding:.55rem .75rem;
+              background:#F7FAFC;
+              border:1px solid #E6EEF3;
+              border-radius:9px;
+          }}
+          '''
+          css_new = css_anchor + '''        .map-note {{
+              color:#6D8191;
+              font-size:.76rem;
+              line-height:1.35;
+              margin-top:-.2rem;
+              margin-bottom:.7rem;
+          }}
+          '''
+          if ".map-note" not in txt:
+              if css_anchor not in txt:
+                  raise RuntimeError("No se encontró bloque CSS filter-note")
+              txt = txt.replace(css_anchor, css_new, 1)
+
+          # 3) Helpers para texto de amenazas y posiciones de iconos.
+          helper_anchor = '''# ============================================================
+          # GRÁFICOS
+          # ============================================================
+          def construir_mapa(geo, contexto, datos_filtrados, hay_filtros=False):
+          '''
+          helper_new = '''# ============================================================
+          # GRÁFICOS
+          # ============================================================
+          def amenazas_de_fila(fila, seleccion=None):
+              seleccion = seleccion or list(AMENAZAS.keys())
+              salida = []
+              for nombre in seleccion:
+                  col, icono = AMENAZAS[nombre]
+                  if col in fila.index and pd.notna(fila[col]) and int(fila[col]) == 1:
+                      salida.append((nombre, icono))
+              return salida
+
+
+          def posiciones_pais(geo):
+              posiciones = dict(POSICIONES_AMENAZAS)
+              faltantes = set(geo["ISO_CC"].dropna().astype(str)) - set(posiciones)
+              if faltantes:
+                  dis = geo[geo["ISO_CC"].isin(faltantes)][["ISO_CC", "geometry"]].dissolve(by="ISO_CC")
+                  for iso, geom in dis.geometry.items():
+                      if geom is not None and not geom.is_empty:
+                          pt = geom.representative_point()
+                          posiciones[str(iso)] = (float(pt.x), float(pt.y))
+              return posiciones
+
+
+          def construir_mapa(
+              geo,
+              contexto,
+              datos_filtrados,
+              hay_filtros=False,
+              mostrar_amenazas=False,
+              amenazas_visibles=None,
+          ):
+          '''
+          if "def amenazas_de_fila" not in txt:
+              if helper_anchor not in txt:
+                  raise RuntimeError("No se encontró inicio de construir_mapa")
+              txt = txt.replace(helper_anchor, helper_new, 1)
+
+          # 4) Incorporar variables de amenazas al join del mapa.
+          old_cols = '''    cols = ["iso3", "pais", "prioridad", "situacion_predominante", "impacto_salud_documentado"]
+              cols = [c for c in cols if c in contexto.columns]
+          '''
+          new_cols = '''    cols = ["iso3", "pais", "prioridad", "situacion_predominante", "impacto_salud_documentado"]
+              cols += [col for col, _ in AMENAZAS.values()]
+              cols = [c for c in cols if c in contexto.columns]
+          '''
+          if old_cols in txt:
+              txt = txt.replace(old_cols, new_cols, 1)
+
+          # 5) Resumen de amenazas en hover.
+          old_geojson = '''    mapa["nombre_mapa"] = mapa["pais"].fillna(mapa["COUNTRY"])
+              mapa["situacion_mapa"] = mapa["situacion_predominante"].fillna("Sin hallazgos priorizados en este SitRep")
+              geojson = json.loads(mapa.to_json())
+          '''
+          new_geojson = '''    mapa["nombre_mapa"] = mapa["pais"].fillna(mapa["COUNTRY"])
+              mapa["situacion_mapa"] = mapa["situacion_predominante"].fillna("Sin hallazgos priorizados en este SitRep")
+              mapa["amenazas_mapa"] = mapa.apply(
+                  lambda r: " · ".join(
+                      f"{icono} {AMENAZAS_CORTAS[nombre]}"
+                      for nombre, icono in amenazas_de_fila(r)
+                  ) or "Sin amenazas / impactos priorizados",
+                  axis=1,
+              )
+              geojson = json.loads(mapa.to_json())
+          '''
+          if old_geojson in txt:
+              txt = txt.replace(old_geojson, new_geojson, 1)
+
+          # 6) Mostrar amenazas en el hover del coroplético.
+          old_hover = '''            "prioridad_mapa": True,
+                  "situacion_mapa": True,
+              },
+              labels={"prioridad_mapa": "Prioridad", "situacion_mapa": "Situación"},
+          '''
+          new_hover = '''            "prioridad_mapa": True,
+                  "amenazas_mapa": True,
+                  "situacion_mapa": True,
+              },
+              labels={
+                  "prioridad_mapa": "Prioridad",
+                  "amenazas_mapa": "Amenazas / impactos",
+                  "situacion_mapa": "Situación",
+              },
+          '''
+          if old_hover in txt:
+              txt = txt.replace(old_hover, new_hover, 1)
+
+          # 7) Agregar las burbujas de iconos como Scattergeo.
+          icon_anchor = '''    fig.update_geos(
+              projection_type="equirectangular",
+          '''
+          icon_block = '''    if mostrar_amenazas:
+              amenazas_visibles = amenazas_visibles or list(AMENAZAS.keys())
+              posiciones = posiciones_pais(geo)
+              capas = {nombre: {"lon": [], "lat": [], "hover": []} for nombre in amenazas_visibles}
+
+              for _, fila in datos_filtrados.iterrows():
+                  iso = str(fila.get("iso3", ""))
+                  if iso not in posiciones:
+                      continue
+                  activas = amenazas_de_fila(fila, amenazas_visibles)
+                  if not activas:
+                      continue
+
+                  lon0, lat0 = posiciones[iso]
+                  paso = 1.55
+                  for i, (nombre, icono) in enumerate(activas):
+                      offset = (i - (len(activas) - 1) / 2) * paso
+                      capas[nombre]["lon"].append(lon0 + offset)
+                      capas[nombre]["lat"].append(lat0)
+                      capas[nombre]["hover"].append(
+                          f"<b>{html.escape(texto(fila.get('pais'), iso))}</b><br>"
+                          f"{icono} {html.escape(nombre)}"
+                      )
+
+              for nombre in amenazas_visibles:
+                  datos_capa = capas[nombre]
+                  if not datos_capa["lon"]:
+                      continue
+                  _, icono = AMENAZAS[nombre]
+                  fig.add_trace(
+                      go.Scattergeo(
+                          lon=datos_capa["lon"],
+                          lat=datos_capa["lat"],
+                          mode="markers+text",
+                          marker=dict(
+                              size=28,
+                              color="rgba(255,255,255,.94)",
+                              line=dict(color="rgba(0,75,135,.28)", width=1),
+                          ),
+                          text=[icono] * len(datos_capa["lon"]),
+                          textposition="middle center",
+                          textfont=dict(size=14, color=TEXTO),
+                          hovertext=datos_capa["hover"],
+                          hovertemplate="%{hovertext}<extra></extra>",
+                          showlegend=False,
+                      )
+                  )
+
+              # Asegura que los iconos queden sobre el coroplético.
+              for tr in fig.data:
+                  if getattr(tr, "type", "") == "scattergeo":
+                      tr.update(hoverlabel=dict(bgcolor="white", font_size=12, font_color=TEXTO))
+
+              
+          ''' + icon_anchor
+          if "capas = {nombre:" not in txt:
+              if icon_anchor not in txt:
+                  raise RuntimeError("No se encontró fig.update_geos")
+              txt = txt.replace(icon_anchor, icon_block, 1)
+
+          # 8) Controles interactivos encima del mapa.
+          old_panorama = '''# Mapa y resumen
+          section_header("Panorama regional", "Distribución de prioridades y amenazas reportadas")
+          col_mapa, col_resumen = st.columns([4.15, 1.35], gap="medium")
+          with col_mapa:
+              with st.container(border=True):
+                  fig_mapa = construir_mapa(geo, actual, filtrado, hay_filtros)
+                  st.plotly_chart(fig_mapa, use_container_width=True, config=CHART_CONFIG)
+          '''
+          new_panorama = '''# Mapa y resumen
+          section_header("Panorama regional", "Distribución de prioridades y amenazas reportadas")
+
+          with st.container(border=True):
+              vm1, vm2 = st.columns([1.25, 2.75], gap="medium")
+              with vm1:
+                  modo_mapa = st.radio(
+                      "Visualizar",
+                      ["Prioridad", "Prioridad + amenazas"],
+                      index=1,
+                      horizontal=True,
+                      key="modo_mapa",
+                  )
+              with vm2:
+                  if modo_mapa == "Prioridad + amenazas":
+                      amenazas_mapa = st.multiselect(
+                          "Iconos visibles",
+                          list(AMENAZAS.keys()),
+                          default=list(AMENAZAS.keys()),
+                          format_func=lambda x: f"{AMENAZAS[x][1]} {AMENAZAS_CORTAS[x]}",
+                          key="amenazas_mapa",
+                      )
+                  else:
+                      amenazas_mapa = []
+              st.markdown(
+                  '<div class="map-note">El color del país representa la prioridad. Los iconos muestran amenazas / impactos reportados y estos controles solo cambian la visualización del mapa.</div>',
+                  unsafe_allow_html=True,
+              )
+
+          col_mapa, col_resumen = st.columns([4.15, 1.35], gap="medium")
+          with col_mapa:
+              with st.container(border=True):
+                  fig_mapa = construir_mapa(
+                      geo,
+                      actual,
+                      filtrado,
+                      hay_filtros,
+                      mostrar_amenazas=(modo_mapa == "Prioridad + amenazas"),
+                      amenazas_visibles=amenazas_mapa,
+                  )
+                  st.plotly_chart(fig_mapa, use_container_width=True, config=CHART_CONFIG)
+          '''
+          if old_panorama not in txt:
+              raise RuntimeError("No se encontró bloque Panorama regional")
+          txt = txt.replace(old_panorama, new_panorama, 1)
+
+          p.write_text(txt, encoding="utf-8")
+          print("Mapa interactivo con amenazas incorporado")
+          PY
+
+      - name: Validar sintaxis
+        run: python -m py_compile app.py
+
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+            exit 0
+          fi
+          git commit -m "Agregar iconos interactivos de amenazas al mapa"
+          git push
