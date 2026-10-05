@@ -46,18 +46,25 @@ def _hex_rgba(valor, alpha=255):
     return [int(h[i:i + 2], 16) for i in (0, 2, 4)] + [alpha]
 
 
-def _icono_data_uri(clave, size=66):
-    """Rasteriza en memoria exactamente el pictograma vectorial del SitRep."""
+def _icono_data_uri(clave, size=64):
+    """Rasteriza el pictograma SitRep sin recortar su contorno circular."""
+    draw_size = 64
+    cache_key = (clave, draw_size)
     cache = getattr(_icono_data_uri, "_cache", {})
-    if clave in cache:
-        return cache[clave]
+    if cache_key in cache:
+        return cache[cache_key]
 
-    fig = plt.figure(figsize=(0.76, 0.76), dpi=100)
+    dpi = 100
+    canvas_px = 112
+    fig = plt.figure(figsize=(canvas_px / dpi, canvas_px / dpi), dpi=dpi)
+    fig.patch.set_alpha(0)
     ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_facecolor("none")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.axis("off")
-    dibujo = mapa_ref.ICONOS[clave](size)
+
+    dibujo = mapa_ref.ICONOS[clave](draw_size)
     ax.add_artist(
         mapa_ref.AnnotationBbox(
             dibujo,
@@ -65,13 +72,24 @@ def _icono_data_uri(clave, size=66):
             xycoords=ax.transAxes,
             frameon=False,
             box_alignment=(0.5, 0.5),
+            annotation_clip=False,
         )
     )
+
     buffer = BytesIO()
-    fig.savefig(buffer, format="png", dpi=100, transparent=True, pad_inches=0)
+    fig.savefig(
+        buffer,
+        format="png",
+        dpi=dpi,
+        transparent=True,
+        facecolor="none",
+        edgecolor="none",
+        pad_inches=0,
+    )
     plt.close(fig)
+
     uri = "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
-    cache[clave] = uri
+    cache[cache_key] = uri
     _icono_data_uri._cache = cache
     return uri
 
@@ -160,10 +178,10 @@ def _construir_deck(frame_globals):
                 "position": [inicio_x + i * separacion, y_iconos],
                 "icon": {
                     "url": _icono_data_uri(clave),
-                    "width": 44,
-                    "height": 44,
-                    "anchorX": 22,
-                    "anchorY": 22,
+                    "width": 112,
+                    "height": 112,
+                    "anchorX": 56,
+                    "anchorY": 56,
                 },
                 "size": 16,
                 "tooltip_title": nombre_pais,

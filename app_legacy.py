@@ -385,17 +385,41 @@ def logo_data_uri():
 
 
 @st.cache_data(show_spinner=False)
-def amenaza_icon_data_uri(nombre, size=42):
+def amenaza_icon_data_uri(nombre, size=64):
+    """Devuelve el pictograma SitRep completo, circular y con margen transparente."""
     clave = AMENAZAS[nombre][1]
-    fig = plt.figure(figsize=(.50, .50), dpi=100)
+    dpi = 100
+    canvas_px = 112
+    draw_size = 64
+
+    fig = plt.figure(figsize=(canvas_px / dpi, canvas_px / dpi), dpi=dpi)
+    fig.patch.set_alpha(0)
     ax = fig.add_axes([0, 0, 1, 1])
-    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
-    ax.add_artist(mapa_ref.AnnotationBbox(
-        mapa_ref.ICONOS[clave](size), (.5, .5), xycoords=ax.transAxes,
-        frameon=False, box_alignment=(.5, .5)
-    ))
+    ax.set_facecolor("none")
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.axis("off")
+    ax.add_artist(
+        mapa_ref.AnnotationBbox(
+            mapa_ref.ICONOS[clave](draw_size),
+            (.5, .5),
+            xycoords=ax.transAxes,
+            frameon=False,
+            box_alignment=(.5, .5),
+            annotation_clip=False,
+        )
+    )
+
     buf = BytesIO()
-    fig.savefig(buf, format="png", dpi=100, transparent=True, pad_inches=0)
+    fig.savefig(
+        buf,
+        format="png",
+        dpi=dpi,
+        transparent=True,
+        facecolor="none",
+        edgecolor="none",
+        pad_inches=0,
+    )
     plt.close(fig)
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
@@ -750,7 +774,7 @@ def matriz_amenazas(datos, altura=560):
     fig.update_yaxes(autorange="reversed", tickfont=dict(size=10), showgrid=False)
     for i, nombre in enumerate(nombres):
         fig.add_layout_image(dict(
-            source=amenaza_icon_data_uri(nombre, 34),
+            source=amenaza_icon_data_uri(nombre),
             xref="paper", yref="paper",
             x=(i + .5) / len(nombres), y=-.085,
             sizex=.038, sizey=.038,
