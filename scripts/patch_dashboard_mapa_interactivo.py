@@ -52,14 +52,19 @@ txt = txt.replace(
     '                pickable=False,\n',
 )
 
-# Vista inicial centrada en las Américas.
+# Vista inicial centrada en las Américas y sin posibilidad de alejarse hasta
+# mostrar el mundo completo.
 txt = txt.replace('        longitude=-76.0,\n        latitude=-10.0,\n        zoom=2.18,\n',
-                  '        longitude=-76.0,\n        latitude=-10.0,\n        zoom=2.25,\n')
+                  '        longitude=-76.0,\n        latitude=-10.0,\n        zoom=2.25,\n        min_zoom=2.05,\n        max_zoom=5.25,\n')
+# Si el zoom ya fue cambiado por una ejecución previa, añadir los límites.
+if 'zoom=2.25,\n        min_zoom=' not in txt:
+    txt = txt.replace('        zoom=2.25,\n        pitch=0,\n',
+                      '        zoom=2.25,\n        min_zoom=2.05,\n        max_zoom=5.25,\n        pitch=0,\n')
 
 # Restringir la navegación: se conserva zoom + hover, pero no se puede arrastrar
 # el mapa hacia otras partes del mundo.
 old_deck = '''    return pdk.Deck(\n        layers=capas,\n        initial_view_state=vista,\n        map_style=None,\n        tooltip=tooltip,\n    )\n'''
-new_deck = '''    vista_mapa = pdk.View(\n        type="MapView",\n        controller={\n            "dragPan": False,\n            "dragRotate": False,\n            "scrollZoom": True,\n            "doubleClickZoom": True,\n            "touchZoom": True,\n            "keyboard": False,\n        },\n    )\n\n    return pdk.Deck(\n        layers=capas,\n        initial_view_state=vista,\n        views=[vista_mapa],\n        map_style=None,\n        tooltip=tooltip,\n    )\n'''
+new_deck = '''    vista_mapa = pdk.View(\n        type="MapView",\n        controller={\n            "dragPan": False,\n            "dragRotate": False,\n            "scrollZoom": True,\n            "doubleClickZoom": True,\n            "touchZoom": True,\n            "keyboard": False,\n        },\n        repeat=False,\n    )\n\n    return pdk.Deck(\n        layers=capas,\n        initial_view_state=vista,\n        views=[vista_mapa],\n        map_style=None,\n        tooltip=tooltip,\n    )\n'''
 if old_deck in txt:
     txt = txt.replace(old_deck, new_deck, 1)
 elif 'views=[vista_mapa]' not in txt:
