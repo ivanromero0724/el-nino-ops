@@ -811,7 +811,7 @@ def matriz_amenazas(datos, altura=560):
             source=amenaza_icon_data_uri(nombre),
             xref="paper", yref="paper",
             x=(i + .5) / len(nombres), y=-.145,
-            sizex=.038, sizey=.038,
+            sizex=.052, sizey=.052,
             xanchor="center", yanchor="middle", layer="above"
         ))
     return fig
