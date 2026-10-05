@@ -61,21 +61,35 @@ jobs:
           p = Path("scripts/mapa_sitrep.py")
           txt = p.read_text(encoding="utf-8")
 
-          # Océano claramente azul y visible aun con los ejes ocultos.
+          # Océano azul OPS claro.
           txt = txt.replace('AZUL_MAR = "#E5F6FB"', 'AZUL_MAR = "#D9EEF7"')
-          if 'ax.add_patch(Rectangle((-124,-58),94,90' not in txt and 'ax.add_patch(Rectangle((-124,-58),94,94' not in txt:
+
+          # El área del mapa ocupa toda la altura de la página para que el
+          # continente continúe visualmente hasta el borde superior/inferior.
+          txt = txt.replace(
+              'ax=fig.add_axes([.020,.035,.620,.930])',
+              'ax=fig.add_axes([.020,0,.620,1.0])'
+          )
+
+          # Extensión geográfica ampliada al norte. Se amplía también en X
+          # para mantener prácticamente la misma relación de aspecto y no
+          # deformar el continente.
+          for old in [
+              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")',
+              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,36); ax.set_aspect("equal",adjustable="box")',
+          ]:
               txt = txt.replace(
-                  '    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")',
-                  '    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")\n    ax.add_patch(Rectangle((-124,-58),94,90,facecolor=AZUL_MAR,edgecolor="none",zorder=0))'
+                  old,
+                  'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-130,-22); ax.set_ylim(-58,56); ax.set_aspect("equal",adjustable="box")'
               )
 
-          # Dar un poco más de aire al norte para que el mapa no se vea cortado.
-          # Se mantiene la misma escala/proporción general y se conserva el fondo azul.
-          txt = txt.replace('ax.set_ylim(-58,32)', 'ax.set_ylim(-58,36)')
-          txt = txt.replace('Rectangle((-124,-58),94,90,', 'Rectangle((-124,-58),94,94,')
+          for old in [
+              'Rectangle((-124,-58),94,90,',
+              'Rectangle((-124,-58),94,94,',
+          ]:
+              txt = txt.replace(old, 'Rectangle((-130,-58),108,114,')
 
-          # Quitar las franjas blancas superior e inferior sin deformar el mapa:
-          # se extiende el mismo azul del océano detrás de toda la columna del mapa.
+          # Fondo azul detrás de toda la columna del mapa.
           fondo_columna = '    fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))'
           if fondo_columna not in txt:
               txt = txt.replace(
@@ -83,10 +97,10 @@ jobs:
                   '    fig=plt.figure(figsize=(13,8.5),facecolor="white")\n' + fondo_columna + '\n'
               )
 
-          # Sin padding externo para que no reaparezca una línea blanca al exportar.
+          # Sin padding externo para evitar franjas blancas.
           txt = txt.replace('pad_inches=.03', 'pad_inches=0')
 
-          # Logo OPS/OMS mucho más grande y con mayor área disponible.
+          # Logo OPS/OMS grande.
           txt = txt.replace(
               'ax_logo=fig.add_axes([.735,.035,.165,.135])',
               'ax_logo=fig.add_axes([.650,.005,.340,.220])'
@@ -99,7 +113,7 @@ jobs:
           txt = txt.replace('OffsetImage(logo,zoom=.32)', 'OffsetImage(logo,zoom=.50)')
 
           p.write_text(txt, encoding="utf-8")
-          print("Estilo actualizado: norte ampliado, océano azul, sin bordes blancos y logo OPS/OMS grande")
+          print("Estilo actualizado: continente extendido al norte hasta el borde de página")
           PY
 
       - name: Preparar geografía
@@ -116,6 +130,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
           else
-            git commit -m "Ajustar extensión norte del mapa"
+            git commit -m "Extender mapa al norte hasta el borde superior"
             git push
           fi
