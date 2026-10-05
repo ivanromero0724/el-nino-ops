@@ -112,3 +112,73 @@ jobs:
               raise SystemExit(f"Falló smoke test del mapa: {fallos}")
           print("OK:", checks)
           PY
+
+      - name: Instalar Playwright
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: E2E hover en navegador
+        run: |
+          streamlit run app.py --server.headless true --server.port 8501 > /tmp/streamlit.log 2>&1 &
+          APP_PID=$!
+          trap "kill $APP_PID || true" EXIT
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8501/_stcore/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://127.0.0.1:8501/_stcore/health
+
+          python - <<'PY'
+          from playwright.sync_api import sync_playwright
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              page = browser.new_page(viewport={"width": 1440, "height": 1100})
+              page.goto("http://127.0.0.1:8501", wait_until="networkidle", timeout=120000)
+
+              # Esperar a que el componente Folium esté montado.
+              folium_frame = None
+              for _ in range(60):
+                  for frame in page.frames:
+                      if frame == page.main_frame:
+                          continue
+                      if frame.locator("path.leaflet-interactive").count() > 0:
+                          folium_frame = frame
+                          break
+                  if folium_frame:
+                      break
+                  page.wait_for_timeout(1000)
+
+              if folium_frame is None:
+                  page.screenshot(path="mapa_hover_fallo.png", full_page=True)
+                  raise AssertionError("No se encontró el mapa Leaflet interactivo")
+
+              pais = folium_frame.locator("path.leaflet-interactive").first
+              pais.hover(force=True)
+              tooltip = folium_frame.locator(".leaflet-tooltip").first
+              tooltip.wait_for(state="visible", timeout=10000)
+              texto = tooltip.inner_text()
+
+              if "Prioridad" not in texto or "Amenazas / impactos" not in texto:
+                  page.screenshot(path="mapa_hover_fallo.png", full_page=True)
+                  raise AssertionError(f"Tooltip incompleto: {texto!r}")
+
+              print("OK tooltip navegador:", texto[:300])
+              page.screenshot(path="mapa_hover_ok.png", full_page=True)
+              browser.close()
+          PY
+
+      - name: Guardar captura E2E
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mapa-hover-e2e
+          path: |
+            mapa_hover_ok.png
+            mapa_hover_fallo.png
+          if-no-files-found: ignore
