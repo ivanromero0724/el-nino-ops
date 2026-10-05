@@ -7,3 +7,5 @@ pyogrio
 plotly
 pydeck
 streamlit
+folium
+streamlit-folium
