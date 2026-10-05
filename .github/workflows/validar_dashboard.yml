@@ -1,6 +1,9 @@
 name: Validar dashboard
 
 # Validación automática del dashboard, dependencias, geografía y capas cartográficas.
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   push:
@@ -20,6 +23,10 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
+      - name: Aplicar mapa interactivo de amenazas
+        if: ${{ hashFiles('scripts/patch_dashboard_mapa_interactivo.py') != '' }}
+        run: python scripts/patch_dashboard_mapa_interactivo.py
+
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
@@ -35,3 +42,16 @@ jobs:
 
       - name: Validar carga del dashboard
         run: python -c "import app"
+
+      - name: Guardar mapa interactivo validado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          if git diff --cached --quiet; then
+            echo "No hay cambios pendientes en app.py"
+          else
+            git commit -m "Hacer interactivo el mapa de prioridad y amenazas con popups"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
