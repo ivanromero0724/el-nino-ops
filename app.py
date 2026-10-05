@@ -105,7 +105,7 @@ def _label_data_uri(texto):
     font_path = font_manager.findfont(
         font_manager.FontProperties(family="DejaVu Sans", weight="bold")
     )
-    font = ImageFont.truetype(font_path, 26)
+    font = ImageFont.truetype(font_path, 20)
     tmp = Image.new("RGBA", (8, 8), (0, 0, 0, 0))
     draw = ImageDraw.Draw(tmp)
     bbox = draw.textbbox((0, 0), texto, font=font)
@@ -186,6 +186,12 @@ def _construir_deck(frame_globals):
         "Sin hallazgos priorizados en este SitRep"
     )
     geojson = json.loads(mapa.to_json())
+    # Duplicar campos del popup al nivel raíz del Feature para que el hover
+    # funcione de forma uniforme en GeoJsonLayer e IconLayer.
+    for feature in geojson.get("features", []):
+        props = feature.get("properties", {})
+        for key in ("tooltip_title", "tooltip_line1", "tooltip_line2", "tooltip_line3"):
+            feature[key] = props.get(key, "")
 
     rutas = []
     anclas = []
@@ -212,8 +218,8 @@ def _construir_deck(frame_globals):
                 "anchorX": 0,
                 "anchorY": label_h / 2,
             },
-            "size": 18,
-            "properties": _props_popup(
+            "size": 13,
+            **_props_popup(
                 nombre_pais,
                 "Amenazas / impactos",
                 "Pasa el cursor sobre los pictogramas para ver el detalle.",
@@ -234,7 +240,7 @@ def _construir_deck(frame_globals):
                     "anchorY": 56,
                 },
                 "size": 20,
-                "properties": _props_popup(
+                **_props_popup(
                     nombre_pais,
                     nombre,
                     "Amenaza / impacto reportado",
@@ -313,8 +319,8 @@ def _construir_deck(frame_globals):
                 get_size="size",
                 size_units="pixels",
                 size_scale=1,
-                size_min_pixels=17,
-                size_max_pixels=20,
+                size_min_pixels=12,
+                size_max_pixels=15,
                 pickable=True,
             )
         )
@@ -349,10 +355,10 @@ def _construir_deck(frame_globals):
     tooltip = {
         "html": (
             "<div style='font-family:Arial,sans-serif;max-width:360px;line-height:1.35'>"
-            "<b style='color:#004B87;font-size:13px'>{properties.tooltip_title}</b><br>"
-            "{properties.tooltip_line1}<br>"
-            "{properties.tooltip_line2}<br>"
-            "<span style='color:#60788A'>{properties.tooltip_line3}</span>"
+            "<b style='color:#004B87;font-size:13px'>{tooltip_title}</b><br>"
+            "{tooltip_line1}<br>"
+            "{tooltip_line2}<br>"
+            "<span style='color:#60788A'>{tooltip_line3}</span>"
             "</div>"
         ),
         "style": {
@@ -448,16 +454,12 @@ def _pyplot_interactivo(fig=None, *args, **kwargs):
     ):
         try:
             deck = _construir_deck(g)
-            evento = st.pydeck_chart(
+            return st.pydeck_chart(
                 deck,
                 use_container_width=True,
                 height=690,
-                on_select="rerun",
-                selection_mode="single-object",
                 key="mapa-regional-elnino",
             )
-            _mostrar_seleccion_mapa(evento)
-            return evento
         except Exception as exc:
             st.warning(f"No fue posible cargar la capa interactiva de amenazas: {exc}")
     return _ORIGINAL_PYPLOT(fig, *args, **kwargs)
