@@ -27,6 +27,10 @@ jobs:
         if: ${{ hashFiles('scripts/patch_dashboard_mapa_interactivo.py') != '' }}
         run: python scripts/patch_dashboard_mapa_interactivo.py
 
+      - name: Activar popups completos
+        if: ${{ hashFiles('scripts/patch_dashboard_popups.py') != '' }}
+        run: python scripts/patch_dashboard_popups.py
+
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
