@@ -194,6 +194,7 @@ st.markdown(
             background:#FFFFFF; border:1px solid {BORDE}; border-radius:14px;
             padding:.95rem 1.05rem; min-height:158px; height:100%;
             box-shadow:0 2px 9px rgba(0,75,135,.035);
+            margin-bottom:.85rem;
         }}
         .detail-card h4 {{color:{AZUL_OPS}; margin:0 0 .48rem 0; font-size:.94rem;}}
         .detail-card p {{color:{TEXTO}; margin:0; font-size:.88rem; line-height:1.48;}}
