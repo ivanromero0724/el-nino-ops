@@ -1,5 +1,7 @@
 from pathlib import Path
 import math
+import os
+import hashlib
 
 import numpy as np
 import pandas as pd
@@ -300,8 +302,8 @@ def main():
     fig=plt.figure(figsize=(13,8.5),facecolor="white")
     fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))
     ax=fig.add_axes([.020,0,.620,1.0]); ax_leg=fig.add_axes([.655,.225,.310,.715]); ax_logo=fig.add_axes([.650,.005,.340,.220])
-    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-123,-30); ax.set_ylim(-58,40); ax.set_aspect("equal",adjustable="box")
-    ax.add_patch(Rectangle((-123,-58),93,98,facecolor=AZUL_MAR,edgecolor="none",zorder=0))
+    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-121.5,-31); ax.set_ylim(-58,37.5); ax.set_aspect("equal",adjustable="box")
+    ax.add_patch(Rectangle((-121.5,-58),90.5,95.5,facecolor=AZUL_MAR,edgecolor="none",zorder=0))
     americas.plot(ax=ax,color=GRIS_BASE,edgecolor=BLANCO,linewidth=.46,zorder=1)
     for prioridad,color in COLORES_PRIORIDAD.items():
         sub=americas[americas["prioridad"]==prioridad]
@@ -339,8 +341,30 @@ def main():
         logo=np.asarray(recortar_logo(RUTA_LOGO))
         ax_logo.add_artist(AnnotationBbox(OffsetImage(logo,zoom=.50),(.5,.48),xycoords=ax_logo.transAxes,frameon=False,box_alignment=(.5,.5)))
 
-    fig.savefig(salida_pdf,format="pdf",facecolor="white",bbox_inches="tight",pad_inches=0)
-    fig.savefig(salida_png,format="png",dpi=350,facecolor="white",bbox_inches="tight",pad_inches=0)
+    # Forzar el render final antes de exportar ambos formatos.
+    fig.canvas.draw()
+
+    # PNG: reemplazar explícitamente el archivo previo y validar el nuevo.
+    salida_png.unlink(missing_ok=True)
+    fig.savefig(salida_png, format="png", dpi=350, facecolor="white", bbox_inches="tight", pad_inches=0)
+    with Image.open(salida_png) as im_png:
+        im_png.verify()
+    png_sha = hashlib.sha256(salida_png.read_bytes()).hexdigest()
+
+    # Copia única por ejecución para evitar confundir una previsualización cacheada de GitHub.
+    for viejo in SALIDA_DIR.glob(f"{salida_png.stem}_rev*.png"):
+        viejo.unlink(missing_ok=True)
+    revision = os.environ.get("GITHUB_RUN_NUMBER", "local")
+    salida_png_revision = SALIDA_DIR / f"{salida_png.stem}_rev{revision}.png"
+    salida_png_revision.write_bytes(salida_png.read_bytes())
+
+    # PDF desde exactamente la misma figura y extensión.
+    salida_pdf.unlink(missing_ok=True)
+    fig.savefig(salida_pdf, format="pdf", facecolor="white", bbox_inches="tight", pad_inches=0)
+
+    print(f"Extensión final: X={ax.get_xlim()} Y={ax.get_ylim()}")
+    print(f"PNG SHA256: {png_sha}")
+    print(f"PNG revisión: {salida_png_revision.resolve()}")
     plt.close(fig)
 
     print(f"SitRep: {sitrep_id}")
