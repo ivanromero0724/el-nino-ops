@@ -134,7 +134,7 @@ st.markdown(
             font-size:.78rem;
             line-height:1.4;
             margin-top:.35rem;
-            margin-bottom:.35rem;
+            margin-bottom:1rem;
             padding:.55rem .75rem;
             background:#F7FAFC;
             border:1px solid #E6EEF3;
@@ -207,7 +207,7 @@ st.markdown(
             color:#6B7F90;
             line-height:1.45;
             margin-top:.85rem;
-            margin-bottom:.35rem;
+            margin-bottom:1rem;
             padding:.62rem .78rem;
             background:#F7FAFC;
             border:1px solid #E6EEF3;
