@@ -192,17 +192,12 @@ def _construir_folium(frame_globals):
     mapa["prioridad_popup"] = mapa["prioridad_mapa"].astype(str)
     mapa["amenazas_popup"] = mapa.apply(amenazas_texto, axis=1)
 
-    situacion = mapa["situacion_predominante"].fillna(
-        "Sin hallazgos priorizados en este SitRep"
-    ).astype(str)
-    mapa["situacion_popup"] = situacion.apply(
-        lambda s: s if len(s) <= 230 else s[:227].rstrip() + "..."
-    )
     mapa["fill_hex"] = mapa["prioridad_mapa"].map(
         lambda p: COLORES_PRIORIDAD.get(p, COLORES_PRIORIDAD["Sin priorización"])
     )
 
-    # Sin teselas externas: océano uniforme y foco exclusivo en las Américas.
+    # Sin teselas externas: océano uniforme y navegación por las Américas,
+    # permitiendo subir hasta Canadá sin perder el encuadre inicial México-Sudamérica.
     m = folium.Map(
         location=[-12.0, -76.0],
         zoom_start=3,
@@ -210,8 +205,8 @@ def _construir_folium(frame_globals):
         min_zoom=2,
         max_zoom=7,
         min_lat=-62,
-        max_lat=35,
-        min_lon=-122,
+        max_lat=85,
+        min_lon=-145,
         max_lon=-30,
         max_bounds=True,
         world_copy_jump=False,
@@ -256,13 +251,11 @@ def _construir_folium(frame_globals):
                 "pais_popup",
                 "prioridad_popup",
                 "amenazas_popup",
-                "situacion_popup",
             ],
             aliases=[
                 "<b>País:</b>",
                 "<b>Prioridad:</b>",
                 "<b>Amenazas / impactos:</b>",
-                "<b>Situación:</b>",
             ],
             localize=False,
             sticky=True,
