@@ -195,5 +195,12 @@ legacy = legacy.replace(
     1,
 )
 
+# 9) Aumentar el tamaño de los pictogramas bajo la matriz.
+legacy = legacy.replace(
+    '            sizex=.038, sizey=.038,\n',
+    '            sizex=.052, sizey=.052,\n',
+    1,
+)
+
 p.write_text(legacy, encoding="utf-8")
-print("OK: matriz con rótulos e iconos separados y alineados")
+print("OK: matriz con rótulos separados e iconos más grandes")
