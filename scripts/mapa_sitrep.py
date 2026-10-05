@@ -300,8 +300,8 @@ def main():
     fig=plt.figure(figsize=(13,8.5),facecolor="white")
     fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))
     ax=fig.add_axes([.020,0,.620,1.0]); ax_leg=fig.add_axes([.655,.225,.310,.715]); ax_logo=fig.add_axes([.650,.005,.340,.220])
-    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-27.5); ax.set_ylim(-58,44); ax.set_aspect("equal",adjustable="box")
-    ax.add_patch(Rectangle((-124,-58),96.5,102,facecolor=AZUL_MAR,edgecolor="none",zorder=0))
+    ax.set_facecolor(AZUL_MAR); ax.set_xlim(-123,-30); ax.set_ylim(-58,40); ax.set_aspect("equal",adjustable="box")
+    ax.add_patch(Rectangle((-123,-58),93,98,facecolor=AZUL_MAR,edgecolor="none",zorder=0))
     americas.plot(ax=ax,color=GRIS_BASE,edgecolor=BLANCO,linewidth=.46,zorder=1)
     for prioridad,color in COLORES_PRIORIDAD.items():
         sub=americas[americas["prioridad"]==prioridad]
