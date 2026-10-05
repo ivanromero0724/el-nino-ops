@@ -7,6 +7,7 @@ on:
       - "data/base_maestra_elnino.csv"
       - "scripts/mapa_sitrep.py"
       - "scripts/preparar_geografia.py"
+      - "assets/ops_oms.png"
       - "requirements.txt"
       - ".github/workflows/generar_mapa.yml"
 
