@@ -376,7 +376,7 @@ def construir_mapa(geo, contexto, datos_filtrados, hay_filtros=False):
     return fig
 
 
-def grafico_subregion(datos):
+def grafico_subregion(datos, altura=560):
     if datos.empty:
         return go.Figure()
     t = (
@@ -398,7 +398,7 @@ def grafico_subregion(datos):
         barmode="stack",
     )
     fig.update_layout(
-        height=max(320, 56 * max(1, len(orden_sub)) + 125),
+        height=altura,
         margin=dict(l=0, r=8, t=8, b=70),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -413,7 +413,7 @@ def grafico_subregion(datos):
     return fig
 
 
-def matriz_amenazas(datos):
+def matriz_amenazas(datos, altura=560):
     if datos.empty:
         return go.Figure()
 
@@ -447,7 +447,7 @@ def matriz_amenazas(datos):
         )
     )
     fig.update_layout(
-        height=max(350, 25 * len(m) + 90),
+        height=altura,
         margin=dict(l=0, r=4, t=8, b=52),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -649,15 +649,27 @@ with col_resumen:
 
 # Situación regional
 section_header("Situación regional", "Comparación territorial y perfil de amenazas")
+# Los dos gráficos usan exactamente la misma altura para que sus tarjetas
+# comiencen y terminen alineadas. La altura se adapta al número de países
+# visibles, pero se limita para evitar paneles demasiado altos o bajos.
+altura_situacion = max(520, min(620, 25 * max(1, len(filtrado)) + 90))
 g1, g2 = st.columns([1.0, 1.45], gap="medium")
 with g1:
     with st.container(border=True):
         st.markdown("**Prioridad por subregión**")
-        st.plotly_chart(grafico_subregion(filtrado), use_container_width=True, config=CHART_CONFIG)
+        st.plotly_chart(
+            grafico_subregion(filtrado, altura=altura_situacion),
+            use_container_width=True,
+            config=CHART_CONFIG,
+        )
 with g2:
     with st.container(border=True):
         st.markdown("**País × amenaza / impacto**")
-        st.plotly_chart(matriz_amenazas(filtrado), use_container_width=True, config=CHART_CONFIG)
+        st.plotly_chart(
+            matriz_amenazas(filtrado, altura=altura_situacion),
+            use_container_width=True,
+            config=CHART_CONFIG,
+        )
 
 # Evolución temporal
 section_header("Evolución temporal", "Cambios entre cortes mensuales del SitRep")
