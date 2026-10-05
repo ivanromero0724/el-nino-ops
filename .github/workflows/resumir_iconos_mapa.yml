@@ -1,0 +1,36 @@
+name: Resumir iconos del mapa
+
+on:
+  push:
+    paths:
+      - "scripts/patch_resumir_iconos.py"
+
+permissions:
+  contents: write
+
+jobs:
+  aplicar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resumir iconos por país
+        run: python scripts/patch_resumir_iconos.py
+
+      - name: Validar sintaxis
+        run: python -m py_compile app.py
+
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.py
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+            exit 0
+          fi
+          git commit -m "Mejorar legibilidad de iconos de amenazas en mapa"
+          git push
