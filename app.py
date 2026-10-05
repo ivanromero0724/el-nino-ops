@@ -119,6 +119,12 @@ def _construir_deck(frame_globals):
         "Sin hallazgos priorizados en este SitRep"
     )
     geojson = json.loads(mapa.to_json())
+    # Duplicar campos de tooltip al nivel superior del Feature para que
+    # el mismo template funcione en GeoJsonLayer, TextLayer e IconLayer.
+    for feature in geojson.get("features", []):
+        props = feature.get("properties", {})
+        for key in ("tooltip_title", "tooltip_line1", "tooltip_line2", "tooltip_line3"):
+            feature[key] = props.get(key, "")
 
     rutas = []
     anclas = []
@@ -154,12 +160,12 @@ def _construir_deck(frame_globals):
                 "position": [inicio_x + i * separacion, y_iconos],
                 "icon": {
                     "url": _icono_data_uri(clave),
-                    "width": 76,
-                    "height": 76,
-                    "anchorX": 38,
-                    "anchorY": 38,
+                    "width": 44,
+                    "height": 44,
+                    "anchorX": 22,
+                    "anchorY": 22,
                 },
-                "size": max(29, mapa_ref.TAMANOS_ICONOS.get(iso, 27) + 4),
+                "size": 16,
                 "tooltip_title": nombre_pais,
                 "tooltip_line1": nombre,
                 "tooltip_line2": "Amenaza / impacto reportado",
@@ -206,7 +212,7 @@ def _construir_deck(frame_globals):
                 rutas,
                 get_path="path",
                 get_color=[7, 85, 148, 205],
-                width_min_pixels=1.15,
+                width_min_pixels=1.0,
                 pickable=False,
             )
         )
@@ -217,7 +223,7 @@ def _construir_deck(frame_globals):
                 anclas,
                 get_position="position",
                 get_fill_color=[7, 85, 148, 255],
-                get_radius=2.8,
+                get_radius=2.2,
                 radius_units="pixels",
                 pickable=False,
             )
@@ -230,8 +236,11 @@ def _construir_deck(frame_globals):
                 get_position="position",
                 get_text="pais",
                 get_color=[0, 62, 120, 255],
-                get_size=14,
+                get_size=9,
                 size_units="pixels",
+                size_scale=1,
+                size_min_pixels=8,
+                size_max_pixels=10,
                 get_text_anchor="'start'",
                 get_alignment_baseline="'center'",
                 font_weight=700,
@@ -247,6 +256,9 @@ def _construir_deck(frame_globals):
                 get_position="position",
                 get_size="size",
                 size_units="pixels",
+                size_scale=1,
+                size_min_pixels=12,
+                size_max_pixels=18,
                 pickable=True,
             )
         )

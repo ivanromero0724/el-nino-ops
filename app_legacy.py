@@ -1,4 +1,5 @@
 from pathlib import Path
+from io import BytesIO
 import base64
 import html
 import json
@@ -39,13 +40,13 @@ COLORES_PRIORIDAD = {
 ORDEN_PRIORIDAD = ["Alta", "Media", "Baja", "Sin priorización"]
 
 AMENAZAS = {
-    "Sequía / agua": ("icono_agua", "💧"),
-    "Inundaciones / lluvias": ("icono_inundaciones", "🌧️"),
-    "Incendios / quemadas": ("icono_incendios", "🔥"),
-    "Inseguridad alimentaria": ("icono_alimentos", "🌾"),
-    "Dengue / otras arbovirosis": ("icono_arbovirosis", "🦟"),
-    "Calidad del aire / riesgo respiratorio": ("icono_respiratorio", "🫁"),
-    "Afectación de servicios de salud": ("icono_servicios", "✚"),
+    "Sequía / agua": ("icono_agua", "agua"),
+    "Inundaciones / lluvias": ("icono_inundaciones", "inundaciones"),
+    "Incendios / quemadas": ("icono_incendios", "incendios"),
+    "Inseguridad alimentaria": ("icono_alimentos", "alimentos"),
+    "Dengue / otras arbovirosis": ("icono_arbovirosis", "arbovirosis"),
+    "Calidad del aire / riesgo respiratorio": ("icono_respiratorio", "respiratorio"),
+    "Afectación de servicios de salud": ("icono_servicios", "servicios"),
 }
 
 AMENAZAS_CORTAS = {
@@ -140,7 +141,7 @@ CHART_CONFIG = {
 
 st.set_page_config(
     page_title="El Niño y salud pública | OPS/OMS",
-    page_icon="🌎",
+    page_icon=str(RUTA_LOGO),
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -383,6 +384,26 @@ def logo_data_uri():
     return f"data:image/png;base64,{encoded}"
 
 
+@st.cache_data(show_spinner=False)
+def amenaza_icon_data_uri(nombre, size=42):
+    clave = AMENAZAS[nombre][1]
+    fig = plt.figure(figsize=(.50, .50), dpi=100)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
+    ax.add_artist(mapa_ref.AnnotationBbox(
+        mapa_ref.ICONOS[clave](size), (.5, .5), xycoords=ax.transAxes,
+        frameon=False, box_alignment=(.5, .5)
+    ))
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=100, transparent=True, pad_inches=0)
+    plt.close(fig)
+    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+
+
+def amenaza_icon_html(nombre, size=20):
+    return f'<img class="threat-icon" src="{amenaza_icon_data_uri(nombre)}" width="{size}" height="{size}" alt="">'
+
+
 # ============================================================
 # GRÁFICOS
 # ============================================================
@@ -402,13 +423,11 @@ def resumen_iconos_pais(fila, seleccion=None, max_iconos=2):
     if not activas:
         return None, []
 
-    iconos = [icono for _, icono in activas]
     nombres = [nombre for nombre, _ in activas]
-
-    etiqueta = "".join(iconos[:max_iconos])
-    extra = len(iconos) - max_iconos
+    etiqueta = " · ".join(AMENAZAS_CORTAS[n] for n in nombres[:max_iconos])
+    extra = len(nombres) - max_iconos
     if extra > 0:
-        etiqueta += f"+{extra}"
+        etiqueta += f" +{extra}"
 
     return etiqueta, nombres
 
@@ -450,7 +469,7 @@ def construir_mapa(
     mapa["situacion_mapa"] = mapa["situacion_predominante"].fillna("Sin hallazgos priorizados en este SitRep")
     mapa["amenazas_mapa"] = mapa.apply(
         lambda r: " · ".join(
-            f"{icono} {AMENAZAS_CORTAS[nombre]}"
+            f"{AMENAZAS_CORTAS[nombre]}"
             for nombre, icono in amenazas_de_fila(r)
         ) or "Sin amenazas / impactos priorizados",
         axis=1,
@@ -500,9 +519,9 @@ def construir_mapa(
             lon0, lat0 = posiciones[iso]
             lon1, lat1 = POSICIONES_CALLOUTS[iso]
             pais = texto(fila.get("pais"), iso)
-            iconos = "  ".join(icono for _, icono in activas)
+            iconos = " · ".join(AMENAZAS_CORTAS[nombre] for nombre, _ in activas)
             detalle = "<br>".join(
-                f"{icono} {html.escape(nombre)}" for nombre, icono in activas
+                f"{html.escape(nombre)}" for nombre, _ in activas
             )
 
             # Segmentos independientes separados por None.
@@ -694,7 +713,7 @@ def matriz_amenazas(datos, altura=560):
 
     columnas = [v[0] for v in AMENAZAS.values()]
     nombres = list(AMENAZAS.keys())
-    etiquetas = [f"{AMENAZAS[n][1]} {AMENAZAS_CORTAS[n]}" for n in nombres]
+    etiquetas = [AMENAZAS_CORTAS[n] for n in nombres]
     m = datos.set_index("pais")[columnas].copy()
     m = m.loc[m.sum(axis=1).sort_values(ascending=False).index]
 
@@ -723,12 +742,20 @@ def matriz_amenazas(datos, altura=560):
     )
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=4, t=8, b=52),
+        margin=dict(l=0, r=4, t=8, b=82),
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
     fig.update_xaxes(side="bottom", tickangle=0, tickfont=dict(size=10), showgrid=False)
     fig.update_yaxes(autorange="reversed", tickfont=dict(size=10), showgrid=False)
+    for i, nombre in enumerate(nombres):
+        fig.add_layout_image(dict(
+            source=amenaza_icon_data_uri(nombre, 34),
+            xref="paper", yref="paper",
+            x=(i + .5) / len(nombres), y=-.085,
+            sizex=.038, sizey=.038,
+            xanchor="center", yanchor="middle", layer="above"
+        ))
     return fig
 
 
@@ -890,8 +917,8 @@ hay_filtros = bool(filtro_sub or filtro_pri or filtro_amenaza)
 section_header("Panorama del corte", "Indicadores principales para la selección actual")
 k1, k2, k3, k4, k5 = st.columns(5, gap="medium")
 k1.metric("Países / territorios", int(len(filtrado)))
-k2.metric("🔴 Prioridad alta", int((filtrado["prioridad"] == "Alta").sum()))
-k3.metric("🟠 Prioridad media", int((filtrado["prioridad"] == "Media").sum()))
+k2.metric("Prioridad alta", int((filtrado["prioridad"] == "Alta").sum()))
+k3.metric("Prioridad media", int((filtrado["prioridad"] == "Media").sum()))
 k4.metric("Declaratoria activa", int(filtrado["declaratoria_activa"].apply(es_activo).sum()))
 k5.metric("Impacto en salud", int(filtrado["impacto_salud_documentado"].apply(es_impacto).sum()))
 
@@ -914,7 +941,7 @@ with st.container(border=True):
                 "Iconos visibles",
                 list(AMENAZAS.keys()),
                 default=list(AMENAZAS.keys()),
-                format_func=lambda x: f"{AMENAZAS[x][1]} {AMENAZAS_CORTAS[x]}",
+                format_func=lambda x: AMENAZAS_CORTAS[x],
                 key="amenazas_mapa",
             )
         else:
@@ -952,7 +979,7 @@ with col_resumen:
     for nombre, (col, icono) in AMENAZAS.items():
         n = int(filtrado[col].sum()) if col in filtrado.columns else 0
         st.markdown(
-            f'<div class="threat-row"><span>{icono} {html.escape(nombre)}</span><span class="threat-count">{n}</span></div>',
+            f'<div class="threat-row"><span class="threat-label">{amenaza_icon_html(nombre)}{html.escape(nombre)}</span><span class="threat-count">{n}</span></div>',
             unsafe_allow_html=True,
         )
     st.markdown('</div>', unsafe_allow_html=True)
