@@ -279,7 +279,6 @@ def _construir_folium(frame_globals):
     m.get_root().script.add_child(
         folium.Element(
             """
-            <script>
             (function() {
                 function esPaisLeaflet(el) {
                     return !!(el && el.classList && el.classList.contains('leaflet-interactive'));
@@ -299,7 +298,6 @@ def _construir_folium(frame_globals):
                     if (ev.target.blur) ev.target.blur();
                 }, true);
             })();
-            </script>
             """
         )
     )
