@@ -1,5 +1,6 @@
 name: Validar dashboard
 
+# Validación automática del dashboard y de sus dependencias principales.
 on:
   workflow_dispatch:
   push:
