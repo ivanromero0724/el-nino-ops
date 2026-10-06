@@ -290,32 +290,74 @@ st.markdown(
             text-align:right; justify-self:end; line-height:1;
         }}
 
-        .country-breakdown {{
-            border-top:1px solid #EAF0F4;
-            margin-top:.1rem;
-            padding:.35rem .1rem .15rem .1rem;
+        .status-table-wrap {{
+            width:100%;
+            max-height:520px;
+            overflow:auto;
+            border:1px solid #E4EDF3;
+            border-radius:11px;
+            background:#FFFFFF;
         }}
-        .country-breakdown-row {{
-            padding:.42rem 0;
+        .status-table {{
+            width:100%;
+            border-collapse:separate;
+            border-spacing:0;
+            table-layout:fixed;
+            font-size:.82rem;
+            color:{TEXTO};
         }}
-        .country-breakdown-row + .country-breakdown-row {{
-            border-top:1px solid #EEF3F6;
+        .status-table thead th {{
+            position:sticky;
+            top:0;
+            z-index:2;
+            background:#F4F8FB;
+            color:#5C7182;
+            text-transform:uppercase;
+            letter-spacing:.035em;
+            font-size:.70rem;
+            font-weight:800;
+            text-align:left;
+            padding:.72rem .78rem;
+            border-bottom:1px solid #DCE8EF;
         }}
-        .country-breakdown-head {{
-            display:flex; align-items:center; justify-content:space-between; gap:.6rem;
-            color:#5C7182; font-size:.74rem; font-weight:800; line-height:1.2;
+        .status-table tbody td {{
+            padding:.68rem .78rem;
+            border-bottom:1px solid #EDF2F5;
+            vertical-align:middle;
         }}
-        .country-breakdown-label {{
-            display:flex; align-items:center; gap:.38rem;
+        .status-table tbody tr:last-child td {{border-bottom:none;}}
+        .status-table tbody tr:hover td {{background:#FAFCFD;}}
+        .status-country-name {{
+            color:{TEXTO};
+            font-weight:800;
+            line-height:1.2;
         }}
-        .country-breakdown-dot {{
-            width:8px; height:8px; border-radius:50%; display:inline-block; flex:0 0 8px;
+        .status-country-sub {{
+            color:#7B8D9B;
+            font-size:.72rem;
+            margin-top:.16rem;
+            line-height:1.2;
         }}
-        .country-breakdown-count {{
-            color:{AZUL_OPS}; font-weight:800;
+        .status-pill {{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-height:25px;
+            padding:.22rem .58rem;
+            border-radius:999px;
+            font-size:.73rem;
+            font-weight:800;
+            line-height:1.15;
+            white-space:normal;
+            text-align:center;
         }}
-        .country-breakdown-names {{
-            color:{TEXTO}; font-size:.79rem; line-height:1.38; margin-top:.2rem;
+        .status-table-note {{
+            color:#728596;
+            font-size:.76rem;
+            margin:.15rem 0 .58rem 0;
+        }}
+        @media (max-width: 900px) {{
+            .status-table {{min-width:760px;}}
         }}
 
         .country-summary {{
@@ -979,6 +1021,79 @@ def lista_paises_atribucion_html(datos):
     return '<div class="country-breakdown">' + "".join(filas) + '</div>'
 
 
+def tabla_respuesta_pais_html(datos):
+    """Matriz por país de declaratoria, impacto en salud y atribución a El Niño."""
+    if datos.empty:
+        return '<div class="empty-state">No hay países/territorios para la selección actual.</div>'
+
+    tmp = datos[
+        ["pais", "subregion", "declaratoria_activa", "impacto_salud_documentado", "atribucion_elnino"]
+    ].copy()
+    tmp["Declaratoria"] = tmp["declaratoria_activa"].apply(
+        lambda x: "Activa" if es_activo(x) else "No activa"
+    )
+    tmp["Impacto"] = tmp["impacto_salud_documentado"].apply(
+        lambda x: "Documentado" if es_impacto(x) else "No documentado"
+    )
+    tmp["Atribución"] = tmp["atribucion_elnino"].apply(clasificar_atribucion)
+    tmp = tmp.sort_values("pais", key=lambda s: s.astype(str).str.lower())
+
+    def pill(etiqueta, fondo, color):
+        return (
+            f'<span class="status-pill" '
+            f'style="background:{fondo};color:{color};">{html.escape(etiqueta)}</span>'
+        )
+
+    filas = []
+    for _, fila in tmp.iterrows():
+        declaratoria = str(fila["Declaratoria"])
+        impacto = str(fila["Impacto"])
+        atribucion = str(fila["Atribución"])
+
+        declaratoria_html = (
+            pill(declaratoria, AZUL_OPS, "#FFFFFF")
+            if declaratoria == "Activa"
+            else pill(declaratoria, "#EDF2F5", "#60788A")
+        )
+        impacto_html = (
+            pill(impacto, AZUL_SEC, "#FFFFFF")
+            if impacto == "Documentado"
+            else pill(impacto, "#EDF2F5", "#60788A")
+        )
+
+        color_atrib = ATRIBUCION_COLORES.get(atribucion, "#7B8C99")
+        texto_atrib = (
+            "#FFFFFF"
+            if atribucion in {"Confirmada / relacionada", "Compatible / contextual", "Otra / por revisar"}
+            else TEXTO
+        )
+        atribucion_html = pill(atribucion, color_atrib, texto_atrib)
+
+        filas.append(
+            "<tr>"
+            f'<td><div class="status-country-name">{html.escape(texto(fila["pais"], "—"))}</div>'
+            f'<div class="status-country-sub">{html.escape(texto(fila["subregion"], "Sin subregión"))}</div></td>'
+            f"<td>{declaratoria_html}</td>"
+            f"<td>{impacto_html}</td>"
+            f"<td>{atribucion_html}</td>"
+            "</tr>"
+        )
+
+    return (
+        '<div class="status-table-wrap">'
+        '<table class="status-table">'
+        '<colgroup><col style="width:29%"><col style="width:19%"><col style="width:22%"><col style="width:30%"></colgroup>'
+        "<thead><tr>"
+        "<th>País / territorio</th>"
+        "<th>Declaratoria</th>"
+        "<th>Impacto en salud</th>"
+        "<th>Atribución a El Niño</th>"
+        "</tr></thead>"
+        "<tbody>" + "".join(filas) + "</tbody>"
+        "</table></div>"
+    )
+
+
 def grafico_estado_binario(datos, tipo, altura=300):
     """Resumen de países por declaratoria o impacto, con nombres en el hover."""
     if datos.empty:
@@ -1425,29 +1540,19 @@ with r3:
             config=CHART_CONFIG,
         )
 
-# Detalle visible de países en un único bloque para mantener las tres
-# tarjetas de gráficos perfectamente alineadas.
+# Matriz integrada por país: permite identificar rápidamente qué países
+# explican las barras superiores sin repetir tres listas independientes.
 with st.container(border=True):
-    st.markdown("**Países / territorios por categoría**")
-    d1, d2, d3 = st.columns([1.0, 1.0, 1.35], gap="large")
-    with d1:
-        st.markdown('<div class="summary-label">Declaratoria</div>', unsafe_allow_html=True)
-        st.markdown(
-            lista_paises_estado_html(filtrado, "declaratoria"),
-            unsafe_allow_html=True,
-        )
-    with d2:
-        st.markdown('<div class="summary-label">Impacto en salud documentado</div>', unsafe_allow_html=True)
-        st.markdown(
-            lista_paises_estado_html(filtrado, "impacto"),
-            unsafe_allow_html=True,
-        )
-    with d3:
-        st.markdown('<div class="summary-label">Atribución a El Niño</div>', unsafe_allow_html=True)
-        st.markdown(
-            lista_paises_atribucion_html(filtrado),
-            unsafe_allow_html=True,
-        )
+    st.markdown("**Matriz por país / territorio**")
+    st.markdown(
+        '<div class="status-table-note">Lectura integrada de declaratoria, impacto en salud documentado '
+        'y atribución a El Niño para la selección actual.</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        tabla_respuesta_pais_html(filtrado),
+        unsafe_allow_html=True,
+    )
 
 # Evolución temporal
 section_header("Evolución temporal", "Cambios entre cortes mensuales del SitRep")
