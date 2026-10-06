@@ -230,8 +230,30 @@ jobs:
                   print("ALIGN_ANCESTORS", ancestors)
                   print("ALIGN_PRIORITY", priority_box)
                   print("ALIGN_IFRAME", iframe_box)
+
+                  map_box = marker.evaluate("""el => {
+                      const card = el.closest('[data-testid="stVerticalBlockBorderWrapper"]');
+                      if (!card) return null;
+                      const r = card.getBoundingClientRect();
+                      return {x:r.x, y:r.y, width:r.width, height:r.height, bottom:r.bottom};
+                  }""")
+                  if not map_box or not priority_box:
+                      raise AssertionError(
+                          f"No se pudieron medir mapa/leyenda: mapa={map_box}, prioridad={priority_box}"
+                      )
+                  map_bottom = map_box["bottom"]
+                  priority_bottom = priority_box["y"] + priority_box["height"]
+                  diferencia = abs(map_bottom - priority_bottom)
+                  print("ALIGN_BOTTOM_DIFF", diferencia, map_bottom, priority_bottom)
+                  if diferencia > 2:
+                      page.screenshot(path="mapa_alineacion_fallo.png", full_page=True)
+                      raise AssertionError(
+                          f"Mapa y leyenda desalineados por {diferencia:.2f}px "
+                          f"(mapa={map_bottom:.2f}, leyenda={priority_bottom:.2f})"
+                      )
               except Exception as exc:
                   print("ALIGN_DIAGNOSTIC_ERROR", repr(exc))
+                  raise
 
               # Esperar a que el componente Folium esté montado.
               folium_frame = None
