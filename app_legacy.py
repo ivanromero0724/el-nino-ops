@@ -1016,15 +1016,22 @@ col_mapa, col_resumen = st.columns([4.15, 1.35], gap="medium")
 with col_mapa:
     with st.container(border=True):
         if modo_mapa == "Prioridad + amenazas":
-            fig_mapa = construir_mapa_callouts_estatico(
-                geo,
-                actual,
-                filtrado,
-                hay_filtros,
-                amenazas_visibles=amenazas_mapa,
-            )
-            st.pyplot(fig_mapa, use_container_width=True)
-            plt.close(fig_mapa)
+            renderer = getattr(st, "_ops_render_interactive_map", None)
+            if renderer is not None:
+                # Render directo: evita construir primero una figura Matplotlib
+                # pesada que luego era reemplazada por Folium en cada rerun.
+                renderer(globals())
+            else:
+                # Fallback por si app_legacy.py se ejecuta de forma independiente.
+                fig_mapa = construir_mapa_callouts_estatico(
+                    geo,
+                    actual,
+                    filtrado,
+                    hay_filtros,
+                    amenazas_visibles=amenazas_mapa,
+                )
+                st.pyplot(fig_mapa, use_container_width=True)
+                plt.close(fig_mapa)
         else:
             fig_mapa = construir_mapa(
                 geo,
