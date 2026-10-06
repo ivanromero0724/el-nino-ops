@@ -883,7 +883,7 @@ def grafico_subregion(datos, altura=560):
         paper_bgcolor="white",
         plot_bgcolor="white",
         legend_title_text="",
-        xaxis_title="Países/territorios",
+        xaxis_title="Países",
         yaxis_title=None,
         bargap=.38,
         legend=dict(orientation="h", yanchor="top", y=-.20, xanchor="center", x=.5, font=dict(size=10)),
@@ -1036,7 +1036,7 @@ def lista_paises_atribucion_html(datos):
 def tabla_respuesta_pais_html(datos):
     """Matriz por país de declaratoria, impacto en salud y atribución a El Niño."""
     if datos.empty:
-        return '<div class="empty-state">No hay países/territorios para la selección actual.</div>'
+        return '<div class="empty-state">No hay países para la selección actual.</div>'
 
     tmp = datos[
         ["pais", "subregion", "declaratoria_activa", "impacto_salud_documentado", "atribucion_elnino"]
@@ -1096,7 +1096,7 @@ def tabla_respuesta_pais_html(datos):
         '<table class="status-table">'
         '<colgroup><col style="width:29%"><col style="width:19%"><col style="width:22%"><col style="width:30%"></colgroup>'
         "<thead><tr>"
-        "<th>País / territorio</th>"
+        "<th>País</th>"
         "<th>Declaratoria</th>"
         "<th>Impacto en salud</th>"
         "<th>Atribución a El Niño</th>"
@@ -1143,7 +1143,7 @@ def grafico_estado_binario(datos, tipo, altura=300):
                 textfont=dict(color="white" if cantidad > 0 else TEXTO, size=12),
                 customdata=["<br>".join(nombres) if nombres else "Ninguno"],
                 hovertemplate=(
-                    f"<b>{estado}</b><br>%{{x}} países/territorios<br>"
+                    f"<b>{estado}</b><br>%{{x}} países<br>"
                     "%{customdata}<extra></extra>"
                 ),
                 showlegend=False,
@@ -1157,7 +1157,7 @@ def grafico_estado_binario(datos, tipo, altura=300):
         paper_bgcolor="white",
         plot_bgcolor="white",
         barmode="group",
-        xaxis_title="Países/territorios",
+        xaxis_title="Países",
         yaxis_title=None,
         bargap=.42,
     )
@@ -1212,7 +1212,7 @@ def grafico_atribucion_elnino(datos, altura=300):
             textposition="inside",
             textfont=dict(color="white", size=12),
             customdata=t["Países_lista"],
-            hovertemplate="<b>%{y}</b><br>%{x} países/territorios<br>%{customdata}<extra></extra>",
+            hovertemplate="<b>%{y}</b><br>%{x} países<br>%{customdata}<extra></extra>",
             showlegend=False,
         )
     )
@@ -1221,7 +1221,7 @@ def grafico_atribucion_elnino(datos, altura=300):
         margin=dict(l=0, r=20, t=8, b=42),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        xaxis_title="Países/territorios",
+        xaxis_title="Países",
         yaxis_title=None,
         bargap=.34,
     )
@@ -1261,7 +1261,7 @@ def evolucion_prioridad(base):
         paper_bgcolor="white",
         plot_bgcolor="white",
         xaxis_title=None,
-        yaxis_title="Países/territorios",
+        yaxis_title="Países",
         legend_title_text="",
         legend=dict(orientation="h", yanchor="top", y=-.17, xanchor="left", x=0, font=dict(size=10)),
     )
@@ -1524,7 +1524,7 @@ with g2:
 # Respuesta, impacto y atribución
 section_header(
     "Respuesta, impacto y atribución",
-    "Países/territorios según declaratoria, impacto sanitario documentado y relación con El Niño",
+    "Países según declaratoria, impacto sanitario documentado y relación con El Niño",
 )
 r1, r2, r3 = st.columns([1.0, 1.0, 1.35], gap="medium")
 with r1:
@@ -1555,7 +1555,7 @@ with r3:
 # Matriz integrada por país: permite identificar rápidamente qué países
 # explican las barras superiores sin repetir tres listas independientes.
 with st.container(border=True):
-    st.markdown("**Matriz por país / territorio**")
+    st.markdown("**Matriz por país**")
     st.markdown(
         '<div class="status-table-note">Lectura integrada de declaratoria, impacto en salud documentado '
         'y atribución a El Niño para la selección actual.</div>',
@@ -1585,9 +1585,9 @@ else:
             st.plotly_chart(heatmap_evolucion(base), use_container_width=True, config=CHART_CONFIG)
 
 # Detalle país
-section_header("Detalle por país / territorio", "Lectura cualitativa y cifras disponibles para el corte seleccionado")
+section_header("Detalle por país", "Lectura cualitativa y cifras disponibles para el corte seleccionado")
 if filtrado.empty:
-    st.warning("No hay países/territorios que cumplan los filtros seleccionados.")
+    st.warning("No hay países que cumplan los filtros seleccionados.")
 else:
     with st.container(border=True):
         selector_col, _ = st.columns([1.25, 2.75])
@@ -1599,7 +1599,7 @@ else:
             if st.session_state.get("pais_detalle") not in paises:
                 st.session_state["pais_detalle"] = paises[0]
             pais_sel = st.selectbox(
-                "País / territorio",
+                "País",
                 paises,
                 key="pais_detalle",
             )
