@@ -538,10 +538,6 @@ jobs:
               page.locator('[data-testid="stFormSubmitButton"]').first.click()
               page.wait_for_timeout(850)
 
-          def actualizar_mapa(page):
-              page.locator('[data-testid="stFormSubmitButton"]').nth(1).click()
-              page.wait_for_timeout(700)
-
           def reset_consulta(page):
               # 0=subregión, 1=prioridad, 2=amenaza/impacto.
               for idx in (0, 1, 2):
@@ -556,6 +552,18 @@ jobs:
               esperar_app(page, "carga inicial")
 
               pruebas = 0
+
+              # El control duplicado del mapa debe haber desaparecido: solo
+              # quedan los tres multiselect de consulta (subregión, prioridad,
+              # amenaza/impacto).
+              multis_iniciales = page.locator('[data-testid="stMultiSelect"]')
+              if multis_iniciales.count() != 3:
+                  page.screenshot(path="filtros_exhaustivos_fallo.png", full_page=True)
+                  raise AssertionError(
+                      f"Se esperaban 3 filtros multiselect y hay {multis_iniciales.count()}"
+                  )
+              if page.get_by_text("Seleccionar amenazas / impactos", exact=False).count() > 0:
+                  raise AssertionError("Sigue visible el selector duplicado de amenazas del mapa")
 
               # Cada valor individual de cada filtro principal.
               for sub in SUBREGIONES:
@@ -604,20 +612,6 @@ jobs:
                   select_multi(page, 2, amenaza)
                   aplicar_consulta(page)
                   esperar_app(page, f"Prioridad={pri} | Amenaza={amenaza}")
-                  pruebas += 1
-
-              # Selector de amenazas del mapa: probar vacío y cada opción por separado.
-              reset_consulta(page)
-              clear_multi(page, 3)
-              actualizar_mapa(page)
-              esperar_app(page, "Mapa sin pictogramas")
-              pruebas += 1
-
-              for amenaza in AMENAZAS:
-                  clear_multi(page, 3)
-                  select_multi(page, 3, amenaza, clear_first=False)
-                  actualizar_mapa(page)
-                  esperar_app(page, f"Selector mapa={amenaza}")
                   pruebas += 1
 
               # Estrés final: varios cambios rápidos consecutivos.
