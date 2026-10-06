@@ -292,10 +292,10 @@ st.markdown(
 
         .status-table-wrap {{
             width:100%;
-            max-height:520px;
-            overflow:auto;
-            border:1px solid #E4EDF3;
-            border-radius:11px;
+            overflow-x:auto;
+            overflow-y:visible;
+            border:none;
+            border-radius:0;
             background:#FFFFFF;
         }}
         .status-table {{
@@ -307,9 +307,6 @@ st.markdown(
             color:{TEXTO};
         }}
         .status-table thead th {{
-            position:sticky;
-            top:0;
-            z-index:2;
             background:#F4F8FB;
             color:#5C7182;
             text-transform:uppercase;
