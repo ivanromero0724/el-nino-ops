@@ -204,37 +204,57 @@ jobs:
               page = browser.new_page(viewport={"width": 1440, "height": 1100})
               page.goto("http://127.0.0.1:8501", wait_until="networkidle", timeout=120000)
 
-              # Diagnóstico de alineación mapa/leyenda: imprimir la jerarquía
-              # del contenedor del mapa y las cajas visibles para corregir con
-              # medidas reales, no por aproximación visual.
+              # Medir la alineación real a partir del iframe visible del mapa.
+              # Se busca el ancestro que realmente dibuja el borde del contenedor.
               try:
-                  marker = page.locator(".map-card-marker").first
-                  marker.wait_for(state="attached", timeout=15000)
-                  ancestors = marker.evaluate("""el => {
+                  iframe = page.locator("iframe").first
+                  iframe.wait_for(state="attached", timeout=15000)
+                  iframe_ancestors = iframe.evaluate("""el => {
                       const out = [];
                       let p = el;
                       for (let i = 0; p && i < 12; i++, p = p.parentElement) {
                           const r = p.getBoundingClientRect();
+                          const cs = getComputedStyle(p);
                           out.push({
                               tag: p.tagName,
                               testid: p.getAttribute("data-testid"),
                               cls: typeof p.className === "string" ? p.className : "",
-                              x: r.x, y: r.y, w: r.width, h: r.height,
-                              bottom: r.bottom
+                              x:r.x, y:r.y, w:r.width, h:r.height, bottom:r.bottom,
+                              borderTop: cs.borderTopWidth,
+                              borderBottom: cs.borderBottomWidth,
+                              borderRadius: cs.borderRadius
                           });
                       }
                       return out;
                   }""")
                   priority_box = page.locator(".priority-card").first.bounding_box()
-                  print("ALIGN_ANCESTORS", ancestors)
+                  map_box = iframe.evaluate("""el => {
+                      let p = el.parentElement;
+                      while (p) {
+                          const cs = getComputedStyle(p);
+                          const bw = Math.max(
+                              parseFloat(cs.borderTopWidth) || 0,
+                              parseFloat(cs.borderBottomWidth) || 0,
+                              parseFloat(cs.borderLeftWidth) || 0,
+                              parseFloat(cs.borderRightWidth) || 0
+                          );
+                          if (bw >= 1) {
+                              const r = p.getBoundingClientRect();
+                              return {
+                                  x:r.x, y:r.y, width:r.width, height:r.height,
+                                  bottom:r.bottom, borderWidth:bw,
+                                  testid:p.getAttribute("data-testid"),
+                                  cls: typeof p.className === "string" ? p.className : ""
+                              };
+                          }
+                          p = p.parentElement;
+                      }
+                      return null;
+                  }""")
+                  print("ALIGN_IFRAME_ANCESTORS", iframe_ancestors)
+                  print("ALIGN_MAP", map_box)
                   print("ALIGN_PRIORITY", priority_box)
 
-                  map_box = marker.evaluate("""el => {
-                      const card = el.closest('[data-testid="stVerticalBlockBorderWrapper"]');
-                      if (!card) return null;
-                      const r = card.getBoundingClientRect();
-                      return {x:r.x, y:r.y, width:r.width, height:r.height, bottom:r.bottom};
-                  }""")
                   if not map_box or not priority_box:
                       raise AssertionError(
                           f"No se pudieron medir mapa/leyenda: mapa={map_box}, prioridad={priority_box}"
