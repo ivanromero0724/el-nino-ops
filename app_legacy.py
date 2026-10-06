@@ -263,7 +263,7 @@ st.markdown(
         }}
         .legend-row + .legend-row {{border-top:1px solid #EEF3F6;}}
         .legend-card.amenazas-card .legend-row {{
-            min-height:56px;
+            min-height:62px;
         }}
         .legend-label {{
             display:flex; align-items:center; gap:.55rem; min-width:0;
