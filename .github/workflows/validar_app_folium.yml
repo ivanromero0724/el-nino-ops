@@ -115,6 +115,54 @@ jobs:
           print("OK:", checks)
           PY
 
+      - name: Validar visibilidad del mapa según filtros
+        env:
+          OPS_MAP_SMOKE_TEST: "1"
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          import app
+
+          mapa = pd.DataFrame({
+              "ISO_CC": ["MEX", "COL", "CAN", "ARG"],
+              "iso3": ["MEX", "COL", None, None],
+          })
+
+          # Sin filtros: toda la geografía sigue visible.
+          r = app._filtrar_geografia_mapa(
+              mapa, pd.DataFrame({"iso3": ["MEX", "COL"]}), False, []
+          )
+          assert set(r["ISO_CC"]) == {"MEX", "COL", "CAN", "ARG"}
+
+          # Subregión / prioridad / amenaza normales: solo países realmente
+          # presentes en la base ya filtrada.
+          r = app._filtrar_geografia_mapa(
+              mapa, pd.DataFrame({"iso3": ["MEX"]}), True, ["Alta"]
+          )
+          assert set(r["ISO_CC"]) == {"MEX"}
+
+          r = app._filtrar_geografia_mapa(
+              mapa, pd.DataFrame({"iso3": ["COL"]}), True, []
+          )
+          assert set(r["ISO_CC"]) == {"COL"}
+
+          # Excepción solicitada: al filtrar "Sin priorización", además de los
+          # registros seleccionados se ven los países del mapa sin fila en la base.
+          r = app._filtrar_geografia_mapa(
+              mapa, pd.DataFrame({"iso3": ["COL"]}), True, ["Sin priorización"]
+          )
+          assert set(r["ISO_CC"]) == {"COL", "CAN", "ARG"}
+
+          # Incluso si ningún registro de la base cumple otros filtros, los países
+          # sin registro permanecen visibles cuando se pidió Sin priorización.
+          r = app._filtrar_geografia_mapa(
+              mapa, pd.DataFrame({"iso3": pd.Series(dtype=str)}), True, ["Sin priorización"]
+          )
+          assert set(r["ISO_CC"]) == {"CAN", "ARG"}
+
+          print("OK: reglas de visibilidad del mapa según filtros")
+          PY
+
       - name: Instalar Playwright
         run: |
           pip install playwright
