@@ -1034,27 +1034,18 @@ k5.metric("Impacto en salud", int(filtrado["impacto_salud_documentado"].apply(es
 # Mapa y resumen
 section_header("Panorama regional", "Distribución de prioridades y amenazas reportadas")
 
+# El mapa usa directamente el filtro general de Amenaza / impacto. Si no hay
+# selección, muestra todos los pictogramas; si hay selección, muestra solo los
+# correspondientes a ese mismo filtro. Así se evita duplicar controles.
+modo_mapa = "Prioridad + amenazas"
+amenazas_mapa = filtro_amenaza if filtro_amenaza else list(AMENAZAS.keys())
+
 with st.container(border=True):
-    # Una sola vista: prioridad por color + amenazas/impactos mediante callouts.
-    modo_mapa = "Prioridad + amenazas"
-    with st.form("form_amenazas_mapa", border=False):
-        fm1, fm2 = st.columns([4.4, 1.0], gap="medium")
-        with fm1:
-            amenazas_mapa = st.multiselect(
-                "Seleccionar amenazas / impactos",
-                list(AMENAZAS.keys()),
-                default=list(AMENAZAS.keys()),
-                format_func=lambda x: AMENAZAS_CORTAS[x],
-                key="amenazas_mapa",
-            )
-        with fm2:
-            st.markdown("<div style='height:1.65rem'></div>", unsafe_allow_html=True)
-            st.form_submit_button(
-                "Actualizar mapa",
-                width="stretch",
-            )
     st.markdown(
-        '<div class="map-note">El color del país representa el nivel de prioridad. Los pictogramas muestran las amenazas / impactos seleccionados. Puedes hacer zoom y pasar el cursor sobre países e iconos para ver el detalle.</div>',
+        '<div class="map-note">El color del país representa el nivel de prioridad. '
+        'Los pictogramas siguen el filtro general de <b>Amenaza / impacto</b>; '
+        'si no seleccionas ninguno, se muestran todos. Puedes hacer zoom y pasar '
+        'el cursor sobre países e iconos para ver el detalle.</div>',
         unsafe_allow_html=True,
     )
 
