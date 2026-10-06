@@ -126,41 +126,54 @@ jobs:
           mapa = pd.DataFrame({
               "ISO_CC": ["MEX", "COL", "CAN", "ARG"],
               "iso3": ["MEX", "COL", None, None],
+              "prioridad": ["Alta", "Media", None, None],
           })
 
-          # Sin filtros: toda la geografía sigue visible.
+          # Sin filtros: toda la geografía sigue visible con su prioridad normal.
           r = app._filtrar_geografia_mapa(
               mapa, pd.DataFrame({"iso3": ["MEX", "COL"]}), False, []
           )
           assert set(r["ISO_CC"]) == {"MEX", "COL", "CAN", "ARG"}
+          assert dict(zip(r["ISO_CC"], r["prioridad_mapa"])) == {
+              "MEX": "Alta",
+              "COL": "Media",
+              "CAN": "Sin priorización",
+              "ARG": "Sin priorización",
+          }
 
-          # Subregión / prioridad / amenaza normales: solo países realmente
-          # presentes en la base ya filtrada.
+          # Con subregión / prioridad / amenaza se conserva el mapa completo:
+          # los que cumplen mantienen su prioridad y los demás pasan a
+          # "Fuera del filtro" para conservar el contexto geográfico.
           r = app._filtrar_geografia_mapa(
               mapa, pd.DataFrame({"iso3": ["MEX"]}), True, ["Alta"]
           )
-          assert set(r["ISO_CC"]) == {"MEX"}
+          assert set(r["ISO_CC"]) == {"MEX", "COL", "CAN", "ARG"}
+          estado = dict(zip(r["ISO_CC"], r["prioridad_mapa"]))
+          assert estado["MEX"] == "Alta"
+          assert estado["COL"] == "Fuera del filtro"
+          assert estado["CAN"] == "Fuera del filtro"
+          assert estado["ARG"] == "Fuera del filtro"
 
           r = app._filtrar_geografia_mapa(
               mapa, pd.DataFrame({"iso3": ["COL"]}), True, []
           )
-          assert set(r["ISO_CC"]) == {"COL"}
+          estado = dict(zip(r["ISO_CC"], r["prioridad_mapa"]))
+          assert estado["COL"] == "Media"
+          assert estado["MEX"] == "Fuera del filtro"
+          assert estado["CAN"] == "Fuera del filtro"
 
-          # Excepción solicitada: al filtrar "Sin priorización", además de los
-          # registros seleccionados se ven los países del mapa sin fila en la base.
+          # Excepción: al filtrar "Sin priorización", los países que no tienen
+          # fila en el SitRep siguen mostrándose como "Sin priorización".
           r = app._filtrar_geografia_mapa(
               mapa, pd.DataFrame({"iso3": ["COL"]}), True, ["Sin priorización"]
           )
-          assert set(r["ISO_CC"]) == {"COL", "CAN", "ARG"}
+          estado = dict(zip(r["ISO_CC"], r["prioridad_mapa"]))
+          assert estado["COL"] == "Media"
+          assert estado["MEX"] == "Fuera del filtro"
+          assert estado["CAN"] == "Sin priorización"
+          assert estado["ARG"] == "Sin priorización"
 
-          # Incluso si ningún registro de la base cumple otros filtros, los países
-          # sin registro permanecen visibles cuando se pidió Sin priorización.
-          r = app._filtrar_geografia_mapa(
-              mapa, pd.DataFrame({"iso3": pd.Series(dtype=str)}), True, ["Sin priorización"]
-          )
-          assert set(r["ISO_CC"]) == {"CAN", "ARG"}
-
-          print("OK: reglas de visibilidad del mapa según filtros")
+          print("OK: contexto geográfico y colores de filtro del mapa")
           PY
 
       - name: Instalar Playwright
