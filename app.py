@@ -186,28 +186,33 @@ def _props_popup(titulo, linea1="", linea2="", linea3=""):
 
 
 def _filtrar_geografia_mapa(mapa, filtrado, hay_filtros, filtro_prioridad):
-    """Devuelve solo los países que deben verse en el mapa según los filtros.
+    """Mantiene el contexto geográfico completo y resalta lo filtrado.
 
-    Regla general:
-    - sin filtros, se conserva toda la geografía de las Américas;
-    - con cualquier filtro, solo se muestran los países/territorios presentes
-      en el DataFrame ya filtrado;
-    - excepción: si "Sin priorización" está seleccionado en Prioridad, también
-      se conservan los países del GeoPackage que no tienen registro en el
-      SitRep actual, porque esos se representan justamente como sin priorización.
+    Regla visual:
+    - sin filtros, cada país conserva su prioridad normal;
+    - con filtros, los países que cumplen conservan su prioridad y los demás
+      siguen visibles en el color "Fuera del filtro";
+    - si se selecciona "Sin priorización", los países del GeoPackage que no
+      tienen fila en el SitRep permanecen como "Sin priorización" en vez de
+      pasar a "Fuera del filtro".
     """
+    salida = mapa.copy()
+    salida["prioridad_mapa"] = salida["prioridad"].fillna("Sin priorización")
+
     if not hay_filtros:
-        return mapa.copy()
+        return salida
 
     seleccionados = set(filtrado["iso3"].dropna().astype(str))
-    visibles = mapa["ISO_CC"].isin(seleccionados)
+    fuera = ~salida["ISO_CC"].isin(seleccionados)
 
     prioridad_sel = set(str(x) for x in (filtro_prioridad or []))
     if "Sin priorización" in prioridad_sel:
-        sin_registro = mapa["iso3"].isna()
-        visibles = visibles | sin_registro
+        # Países sin fila en la base son justamente los que deben seguir
+        # representándose como "Sin priorización".
+        fuera = fuera & salida["iso3"].notna()
 
-    return mapa.loc[visibles].copy()
+    salida.loc[fuera, "prioridad_mapa"] = "Fuera del filtro"
+    return salida
 
 
 def _construir_folium(frame_globals):
@@ -242,8 +247,6 @@ def _construir_folium(frame_globals):
         hay_filtros=hay_filtros,
         filtro_prioridad=filtro_prioridad,
     )
-
-    mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
 
     def amenazas_texto(r):
         activas = _amenazas_activas(r, list(AMENAZAS.keys()))
@@ -470,7 +473,6 @@ def _construir_deck(frame_globals):
         hay_filtros=hay_filtros,
         filtro_prioridad=filtro_prioridad,
     )
-    mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
 
     def amenazas_texto(r):
         activas = _amenazas_activas(r, list(AMENAZAS.keys()))
