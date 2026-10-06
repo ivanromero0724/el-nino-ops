@@ -1005,12 +1005,6 @@ with st.container(border=True):
             width="stretch",
         )
 
-    st.markdown(
-        '<div class="filter-note">Selecciona uno o varios filtros y pulsa <b>Aplicar filtros</b>. '
-        'El tablero se actualiza en un solo paso para evitar recargas intermedias.</div>',
-        unsafe_allow_html=True,
-    )
-
 filtrado = actual.copy()
 if filtro_sub:
     filtrado = filtrado[filtrado["subregion"].isin(filtro_sub)]
