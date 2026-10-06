@@ -40,7 +40,7 @@ jobs:
               "tooltip=folium.GeoJsonTooltip",
               "zoom_start=3.0",
               "clip_americas = box(-135.0",
-              "components.html(",
+              "st.iframe(",
               "height=660",
           ]
           faltan = [x for x in requeridos if x not in txt]
@@ -290,6 +290,7 @@ jobs:
               entrada_sub.fill("América Central")
               page.wait_for_timeout(250)
               entrada_sub.press("Enter")
+              page.get_by_role("button", name="Aplicar filtros").click()
               page.wait_for_timeout(1800)
 
               titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
@@ -329,6 +330,7 @@ jobs:
               chips = subregion.locator('[data-testid="stMultiSelectDeleteIcon"]')
               if chips.count() > 0:
                   chips.first.click()
+                  page.get_by_role("button", name="Aplicar filtros").click()
                   page.wait_for_timeout(1200)
 
               print("OK filtro América Central")
@@ -346,6 +348,7 @@ jobs:
                   entrada.fill(valor)
                   page.wait_for_timeout(250)
                   entrada.press("Enter")
+                  page.get_by_role("button", name="Aplicar filtros").click()
                   page.wait_for_timeout(1200)
 
                   titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
@@ -466,14 +469,23 @@ jobs:
               entrada = widget.locator("input")
               entrada.click()
               entrada.fill(value)
-              page.wait_for_timeout(180)
+              page.wait_for_timeout(120)
               entrada.press("Enter")
-              page.wait_for_timeout(750)
+              page.wait_for_timeout(120)
+
+          def aplicar_consulta(page):
+              page.get_by_role("button", name="Aplicar filtros").click()
+              page.wait_for_timeout(850)
+
+          def actualizar_mapa(page):
+              page.get_by_role("button", name="Actualizar mapa").click()
+              page.wait_for_timeout(700)
 
           def reset_consulta(page):
               # 0=subregión, 1=prioridad, 2=amenaza/impacto.
               for idx in (0, 1, 2):
                   clear_multi(page, idx)
+              aplicar_consulta(page)
               esperar_app(page, "reset de filtros")
 
           with sync_playwright() as p:
@@ -488,18 +500,21 @@ jobs:
               for sub in SUBREGIONES:
                   reset_consulta(page)
                   select_multi(page, 0, sub)
+                  aplicar_consulta(page)
                   esperar_app(page, f"Subregión={sub}")
                   pruebas += 1
 
               for pri in PRIORIDADES:
                   reset_consulta(page)
                   select_multi(page, 1, pri)
+                  aplicar_consulta(page)
                   esperar_app(page, f"Prioridad={pri}")
                   pruebas += 1
 
               for amenaza in AMENAZAS:
                   reset_consulta(page)
                   select_multi(page, 2, amenaza)
+                  aplicar_consulta(page)
                   esperar_app(page, f"Amenaza={amenaza}")
                   pruebas += 1
 
@@ -508,6 +523,7 @@ jobs:
                   reset_consulta(page)
                   select_multi(page, 0, sub)
                   select_multi(page, 1, pri)
+                  aplicar_consulta(page)
                   esperar_app(page, f"Subregión={sub} | Prioridad={pri}")
                   pruebas += 1
 
@@ -516,6 +532,7 @@ jobs:
                   reset_consulta(page)
                   select_multi(page, 0, sub)
                   select_multi(page, 2, amenaza)
+                  aplicar_consulta(page)
                   esperar_app(page, f"Subregión={sub} | Amenaza={amenaza}")
                   pruebas += 1
 
@@ -524,18 +541,21 @@ jobs:
                   reset_consulta(page)
                   select_multi(page, 1, pri)
                   select_multi(page, 2, amenaza)
+                  aplicar_consulta(page)
                   esperar_app(page, f"Prioridad={pri} | Amenaza={amenaza}")
                   pruebas += 1
 
               # Selector de amenazas del mapa: probar vacío y cada opción por separado.
               reset_consulta(page)
               clear_multi(page, 3)
+              actualizar_mapa(page)
               esperar_app(page, "Mapa sin pictogramas")
               pruebas += 1
 
               for amenaza in AMENAZAS:
                   clear_multi(page, 3)
                   select_multi(page, 3, amenaza, clear_first=False)
+                  actualizar_mapa(page)
                   esperar_app(page, f"Selector mapa={amenaza}")
                   pruebas += 1
 
@@ -543,12 +563,16 @@ jobs:
               reset_consulta(page)
               for sub in SUBREGIONES:
                   select_multi(page, 0, sub)
+                  aplicar_consulta(page)
                   esperar_app(page, f"estrés subregión {sub}")
                   clear_multi(page, 0)
+                  aplicar_consulta(page)
               for pri in PRIORIDADES:
                   select_multi(page, 1, pri)
+                  aplicar_consulta(page)
                   esperar_app(page, f"estrés prioridad {pri}")
                   clear_multi(page, 1)
+                  aplicar_consulta(page)
 
               print(f"OK filtros exhaustivos: {pruebas} escenarios validados")
               page.screenshot(path="filtros_exhaustivos_ok.png", full_page=True)
