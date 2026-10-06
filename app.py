@@ -20,9 +20,9 @@ from PIL import Image, ImageDraw, ImageFont
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+import streamlit.components.v1 as components
 import folium
 from folium.features import DivIcon
-from streamlit_folium import st_folium
 from shapely.geometry import box
 
 from scripts import mapa_sitrep as mapa_ref
@@ -715,14 +715,18 @@ def _mostrar_seleccion_mapa(evento):
 
 
 def _render_mapa_interactivo(frame_globals):
-    """Render directo del mapa Folium para evitar construir antes el mapa Matplotlib."""
+    """Render unidireccional del mapa Folium.
+
+    Se usa un iframe HTML simple en lugar de streamlit-folium porque el tablero
+    no necesita devolver clics/estado del mapa a Python. Esto evita callbacks
+    extra del componente y hace mucho más estables los reruns de los filtros.
+    """
     mapa_folium = _construir_folium(frame_globals)
-    return st_folium(
-        mapa_folium,
-        use_container_width=True,
+    html_mapa = mapa_folium.get_root().render()
+    return components.html(
+        html_mapa,
         height=660,
-        returned_objects=[],
-        key="mapa-regional-elnino-folium",
+        scrolling=False,
     )
 
 
