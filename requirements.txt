@@ -6,4 +6,5 @@ Pillow
 pyogrio
 plotly
 streamlit
+shapely
 folium
