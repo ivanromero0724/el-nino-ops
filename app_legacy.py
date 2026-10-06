@@ -337,6 +337,26 @@ st.markdown(
         }}
         .status-table tbody tr:last-child td {{border-bottom:1px solid #DCE8EF;}}
         .status-table tbody tr:hover td {{background:#FAFCFD;}}
+        .status-region-row td {{
+            height:34px !important;
+            padding:.42rem .78rem !important;
+            background:#EDF5FA !important;
+            color:{AZUL_OPS};
+            font-size:.72rem;
+            font-weight:800;
+            text-transform:uppercase;
+            letter-spacing:.045em;
+            border-top:1px solid #D7E7F0;
+            border-bottom:1px solid #D7E7F0 !important;
+        }}
+        .status-region-row:first-child td {{border-top:none;}}
+        .status-region-count {{
+            color:#6F8596;
+            font-weight:700;
+            text-transform:none;
+            letter-spacing:0;
+            margin-left:.45rem;
+        }}
         .status-country-name {{
             color:{TEXTO};
             font-weight:800;
@@ -1048,7 +1068,24 @@ def tabla_respuesta_pais_html(datos):
         lambda x: "Documentado" if es_impacto(x) else "No documentado"
     )
     tmp["Atribución"] = tmp["atribucion_elnino"].apply(clasificar_atribucion)
-    tmp = tmp.sort_values("pais", key=lambda s: s.astype(str).str.lower())
+
+    orden_subregiones = [
+        "América del Norte",
+        "América Central",
+        "Caribe",
+        "Subregión Andina",
+        "Brasil y Cono Sur",
+    ]
+    tmp["subregion"] = tmp["subregion"].fillna("Sin subregión")
+    tmp["_suborden"] = pd.Categorical(
+        tmp["subregion"],
+        categories=orden_subregiones + ["Sin subregión"],
+        ordered=True,
+    )
+    tmp = tmp.sort_values(
+        ["_suborden", "pais"],
+        key=lambda s: s.astype(str).str.lower() if s.name == "pais" else s,
+    )
 
     def pill(etiqueta, fondo, color):
         return (
@@ -1057,39 +1094,50 @@ def tabla_respuesta_pais_html(datos):
         )
 
     filas = []
-    for _, fila in tmp.iterrows():
-        declaratoria = str(fila["Declaratoria"])
-        impacto = str(fila["Impacto"])
-        atribucion = str(fila["Atribución"])
+    for subregion, grupo in tmp.groupby("subregion", sort=False, observed=True):
+        if grupo.empty:
+            continue
 
-        declaratoria_html = (
-            pill(declaratoria, AZUL_OPS, "#FFFFFF")
-            if declaratoria == "Activa"
-            else pill(declaratoria, "#EDF2F5", "#60788A")
-        )
-        impacto_html = (
-            pill(impacto, AZUL_SEC, "#FFFFFF")
-            if impacto == "Documentado"
-            else pill(impacto, "#EDF2F5", "#60788A")
-        )
-
-        color_atrib = ATRIBUCION_COLORES.get(atribucion, "#7B8C99")
-        texto_atrib = (
-            "#FFFFFF"
-            if atribucion in {"Confirmada / relacionada", "Compatible / contextual", "Otra / por revisar"}
-            else TEXTO
-        )
-        atribucion_html = pill(atribucion, color_atrib, texto_atrib)
-
+        n_paises = len(grupo)
         filas.append(
-            "<tr>"
-            f'<td><div class="status-country-name">{html.escape(texto(fila["pais"], "—"))}</div>'
-            f'<div class="status-country-sub">{html.escape(texto(fila["subregion"], "Sin subregión"))}</div></td>'
-            f"<td>{declaratoria_html}</td>"
-            f"<td>{impacto_html}</td>"
-            f"<td>{atribucion_html}</td>"
-            "</tr>"
+            '<tr class="status-region-row">'
+            f'<td colspan="4">{html.escape(str(subregion))}'
+            f'<span class="status-region-count">· {n_paises} {"país" if n_paises == 1 else "países"}</span>'
+            '</td></tr>'
         )
+
+        for _, fila in grupo.iterrows():
+            declaratoria = str(fila["Declaratoria"])
+            impacto = str(fila["Impacto"])
+            atribucion = str(fila["Atribución"])
+
+            declaratoria_html = (
+                pill(declaratoria, AZUL_OPS, "#FFFFFF")
+                if declaratoria == "Activa"
+                else pill(declaratoria, "#EDF2F5", "#60788A")
+            )
+            impacto_html = (
+                pill(impacto, AZUL_SEC, "#FFFFFF")
+                if impacto == "Documentado"
+                else pill(impacto, "#EDF2F5", "#60788A")
+            )
+
+            color_atrib = ATRIBUCION_COLORES.get(atribucion, "#7B8C99")
+            texto_atrib = (
+                "#FFFFFF"
+                if atribucion in {"Confirmada / relacionada", "Compatible / contextual", "Otra / por revisar"}
+                else TEXTO
+            )
+            atribucion_html = pill(atribucion, color_atrib, texto_atrib)
+
+            filas.append(
+                "<tr>"
+                f'<td><div class="status-country-name">{html.escape(texto(fila["pais"], "—"))}</div></td>'
+                f"<td>{declaratoria_html}</td>"
+                f"<td>{impacto_html}</td>"
+                f"<td>{atribucion_html}</td>"
+                "</tr>"
+            )
 
     return (
         '<div class="status-table-wrap">'
@@ -1558,7 +1606,7 @@ with st.container(border=True):
     st.markdown("**Matriz por país**")
     st.markdown(
         '<div class="status-table-note">Lectura integrada de declaratoria, impacto en salud documentado '
-        'y atribución a El Niño para la selección actual.</div>',
+        'y atribución a El Niño, agrupada por subregión.</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
