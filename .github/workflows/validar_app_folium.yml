@@ -226,10 +226,8 @@ jobs:
                       return out;
                   }""")
                   priority_box = page.locator(".priority-card").first.bounding_box()
-                  iframe_box = page.locator('div[data-testid="stIFrame"]').first.bounding_box()
                   print("ALIGN_ANCESTORS", ancestors)
                   print("ALIGN_PRIORITY", priority_box)
-                  print("ALIGN_IFRAME", iframe_box)
 
                   map_box = marker.evaluate("""el => {
                       const card = el.closest('[data-testid="stVerticalBlockBorderWrapper"]');
