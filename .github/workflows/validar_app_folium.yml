@@ -39,8 +39,8 @@ jobs:
               "tooltip=folium.GeoJsonTooltip",
               "zoom_start=3.0",
               "clip_americas = box(-135.0",
-              "st_folium(",
-              "use_container_width=True",
+              "components.html(",
+              "height=660",
           ]
           faltan = [x for x in requeridos if x not in txt]
           if faltan:
