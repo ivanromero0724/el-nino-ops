@@ -7,7 +7,7 @@ interactivo con prioridad, pictogramas SitRep, callouts y tooltips.
 
 from io import BytesIO
 import base64
-import importlib
+import runpy
 import inspect
 import json
 import sys
@@ -789,9 +789,11 @@ def _pyplot_interactivo(fig=None, *args, **kwargs):
 st.pyplot = _pyplot_interactivo
 
 # Ejecutar el dashboard original en cada rerun de Streamlit.
+# Se usa run_path para ejecutar una copia fresca en cada rerun sin depender del
+# estado de sys.modules, que puede quedar inconsistente durante reruns rápidos.
 # En CI se puede importar este módulo sin lanzar toda la app para probar el mapa.
 if os.environ.get("OPS_MAP_SMOKE_TEST") != "1":
-    if "app_legacy" in sys.modules:
-        importlib.reload(sys.modules["app_legacy"])
-    else:
-        importlib.import_module("app_legacy")
+    runpy.run_path(
+        os.path.join(os.path.dirname(__file__), "app_legacy.py"),
+        run_name="app_legacy_runtime",
+    )
