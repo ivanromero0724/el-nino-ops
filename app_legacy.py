@@ -966,35 +966,50 @@ st.markdown(
 # Filtros
 with st.container(border=True):
     st.markdown('<div class="filter-label">Filtros de consulta</div>', unsafe_allow_html=True)
-    f1, f2, f3, f4 = st.columns([1.15, 1.35, 1.15, 1.85], gap="medium")
-    with f1:
-        sitrep_id = st.selectbox(
-            "SitRep / fecha",
-            ids,
-            format_func=lambda x: labels_sitrep.get(x, x),
-            key="filtro_sitrep",
+    # Los filtros se agrupan en un formulario para evitar un rerun completo por
+    # cada clic. El tablero se recalcula una sola vez al pulsar "Aplicar filtros",
+    # lo que hace la navegación mucho más estable en Streamlit Cloud.
+    with st.form("form_filtros_consulta", border=False):
+        f1, f2, f3, f4 = st.columns([1.15, 1.35, 1.15, 1.85], gap="medium")
+        with f1:
+            sitrep_id = st.selectbox(
+                "SitRep / fecha",
+                ids,
+                format_func=lambda x: labels_sitrep.get(x, x),
+                key="filtro_sitrep",
+            )
+
+        actual = base[base["sitrep_id"] == sitrep_id].copy()
+
+        with f2:
+            opciones_sub = sorted(actual["subregion"].dropna().astype(str).unique())
+            filtro_sub = st.multiselect(
+                "Subregión", opciones_sub, placeholder="Todas", key="filtro_subregion"
+            )
+        with f3:
+            opciones_pri = [p for p in ORDEN_PRIORIDAD if p in set(actual["prioridad"].dropna())]
+            filtro_pri = st.multiselect(
+                "Prioridad", opciones_pri, placeholder="Todas", key="filtro_prioridad"
+            )
+        with f4:
+            filtro_amenaza = st.multiselect(
+                "Amenaza / impacto",
+                list(AMENAZAS.keys()),
+                placeholder="Todas",
+                key="filtro_amenaza",
+            )
+
+        aplicar_filtros = st.form_submit_button(
+            "Aplicar filtros",
+            type="primary",
+            width="stretch",
         )
 
-    actual = base[base["sitrep_id"] == sitrep_id].copy()
-
-    with f2:
-        opciones_sub = sorted(actual["subregion"].dropna().astype(str).unique())
-        filtro_sub = st.multiselect(
-            "Subregión", opciones_sub, placeholder="Todas", key="filtro_subregion"
-        )
-    with f3:
-        opciones_pri = [p for p in ORDEN_PRIORIDAD if p in set(actual["prioridad"].dropna())]
-        filtro_pri = st.multiselect(
-            "Prioridad", opciones_pri, placeholder="Todas", key="filtro_prioridad"
-        )
-    with f4:
-        filtro_amenaza = st.multiselect(
-            "Amenaza / impacto",
-            list(AMENAZAS.keys()),
-            placeholder="Todas",
-            key="filtro_amenaza",
-        )
-    st.markdown('<div class="filter-note">Los filtros actualizan todos los indicadores y visualizaciones del corte seleccionado.</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="filter-note">Selecciona uno o varios filtros y pulsa <b>Aplicar filtros</b>. '
+        'El tablero se actualiza en un solo paso para evitar recargas intermedias.</div>',
+        unsafe_allow_html=True,
+    )
 
 filtrado = actual.copy()
 if filtro_sub:
@@ -1022,13 +1037,22 @@ section_header("Panorama regional", "Distribución de prioridades y amenazas rep
 with st.container(border=True):
     # Una sola vista: prioridad por color + amenazas/impactos mediante callouts.
     modo_mapa = "Prioridad + amenazas"
-    amenazas_mapa = st.multiselect(
-        "Seleccionar amenazas / impactos",
-        list(AMENAZAS.keys()),
-        default=list(AMENAZAS.keys()),
-        format_func=lambda x: AMENAZAS_CORTAS[x],
-        key="amenazas_mapa",
-    )
+    with st.form("form_amenazas_mapa", border=False):
+        fm1, fm2 = st.columns([4.4, 1.0], gap="medium")
+        with fm1:
+            amenazas_mapa = st.multiselect(
+                "Seleccionar amenazas / impactos",
+                list(AMENAZAS.keys()),
+                default=list(AMENAZAS.keys()),
+                format_func=lambda x: AMENAZAS_CORTAS[x],
+                key="amenazas_mapa",
+            )
+        with fm2:
+            st.markdown("<div style='height:1.65rem'></div>", unsafe_allow_html=True)
+            st.form_submit_button(
+                "Actualizar mapa",
+                width="stretch",
+            )
     st.markdown(
         '<div class="map-note">El color del país representa el nivel de prioridad. Los pictogramas muestran las amenazas / impactos seleccionados. Puedes hacer zoom y pasar el cursor sobre países e iconos para ver el detalle.</div>',
         unsafe_allow_html=True,
