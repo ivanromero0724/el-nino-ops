@@ -292,11 +292,14 @@ st.markdown(
 
         .status-table-wrap {{
             width:100%;
-            overflow-x:auto;
-            overflow-y:visible;
+            max-height:452px;
+            overflow:auto;
+            overscroll-behavior:contain;
+            scrollbar-gutter:stable;
             border:none;
             border-radius:0;
             background:#FFFFFF;
+            margin-bottom:.45rem;
         }}
         .status-table {{
             width:100%;
@@ -307,6 +310,11 @@ st.markdown(
             color:{TEXTO};
         }}
         .status-table thead th {{
+            position:sticky;
+            top:0;
+            z-index:2;
+            height:38px;
+            box-sizing:border-box;
             background:#F4F8FB;
             color:#5C7182;
             text-transform:uppercase;
@@ -317,8 +325,13 @@ st.markdown(
             padding:.72rem .78rem;
             border-bottom:1px solid #DCE8EF;
         }}
+        .status-table tbody tr {{
+            height:46px;
+        }}
         .status-table tbody td {{
-            padding:.68rem .78rem;
+            height:46px;
+            box-sizing:border-box;
+            padding:.48rem .78rem;
             border-bottom:1px solid #EDF2F5;
             vertical-align:middle;
         }}
@@ -328,12 +341,14 @@ st.markdown(
             color:{TEXTO};
             font-weight:800;
             line-height:1.2;
+            white-space:nowrap;
         }}
         .status-country-sub {{
             color:#7B8D9B;
             font-size:.72rem;
             margin-top:.16rem;
             line-height:1.2;
+            white-space:nowrap;
         }}
         .status-pill {{
             display:inline-flex;
@@ -345,7 +360,7 @@ st.markdown(
             font-size:.73rem;
             font-weight:800;
             line-height:1.15;
-            white-space:normal;
+            white-space:nowrap;
             text-align:center;
         }}
         .status-table-note {{
