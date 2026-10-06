@@ -185,12 +185,38 @@ def _props_popup(titulo, linea1="", linea2="", linea3=""):
 
 
 
+def _filtrar_geografia_mapa(mapa, filtrado, hay_filtros, filtro_prioridad):
+    """Devuelve solo los países que deben verse en el mapa según los filtros.
+
+    Regla general:
+    - sin filtros, se conserva toda la geografía de las Américas;
+    - con cualquier filtro, solo se muestran los países/territorios presentes
+      en el DataFrame ya filtrado;
+    - excepción: si "Sin priorización" está seleccionado en Prioridad, también
+      se conservan los países del GeoPackage que no tienen registro en el
+      SitRep actual, porque esos se representan justamente como sin priorización.
+    """
+    if not hay_filtros:
+        return mapa.copy()
+
+    seleccionados = set(filtrado["iso3"].dropna().astype(str))
+    visibles = mapa["ISO_CC"].isin(seleccionados)
+
+    prioridad_sel = set(str(x) for x in (filtro_prioridad or []))
+    if "Sin priorización" in prioridad_sel:
+        sin_registro = mapa["iso3"].isna()
+        visibles = visibles | sin_registro
+
+    return mapa.loc[visibles].copy()
+
+
 def _construir_folium(frame_globals):
     """Mapa Leaflet interactivo con hover por país, callouts e iconos SitRep."""
     geo = frame_globals["geo"].copy()
     actual = frame_globals["actual"].copy()
     filtrado = frame_globals["filtrado"].copy()
     hay_filtros = bool(frame_globals.get("hay_filtros", False))
+    filtro_prioridad = frame_globals.get("filtro_pri", [])
     seleccion = frame_globals.get("amenazas_mapa")
     if seleccion is None:
         seleccion = list(AMENAZAS.keys())
@@ -210,12 +236,14 @@ def _construir_folium(frame_globals):
     # de Estados Unidos sin afectar México, Canadá continental ni Sudamérica.
     clip_americas = box(-135.0, -62.0, -25.0, 85.0)
     mapa["geometry"] = mapa.geometry.intersection(clip_americas)
-    seleccionados = set(filtrado["iso3"].dropna().astype(str))
+    mapa = _filtrar_geografia_mapa(
+        mapa,
+        filtrado=filtrado,
+        hay_filtros=hay_filtros,
+        filtro_prioridad=filtro_prioridad,
+    )
 
     mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
-    if hay_filtros:
-        mask = mapa["iso3"].notna() & ~mapa["ISO_CC"].isin(seleccionados)
-        mapa.loc[mask, "prioridad_mapa"] = "Fuera del filtro"
 
     def amenazas_texto(r):
         activas = _amenazas_activas(r, list(AMENAZAS.keys()))
@@ -424,6 +452,7 @@ def _construir_deck(frame_globals):
     actual = frame_globals["actual"].copy()
     filtrado = frame_globals["filtrado"].copy()
     hay_filtros = bool(frame_globals.get("hay_filtros", False))
+    filtro_prioridad = frame_globals.get("filtro_pri", [])
     seleccion = frame_globals.get("amenazas_mapa")
     if seleccion is None:
         seleccion = list(AMENAZAS.keys())
@@ -435,11 +464,13 @@ def _construir_deck(frame_globals):
 
     mapa = geo[["COUNTRY", "ISO_CC", "geometry"]].copy()
     mapa = mapa.merge(info, left_on="ISO_CC", right_on="iso3", how="left")
-    seleccionados = set(filtrado["iso3"].dropna().astype(str))
+    mapa = _filtrar_geografia_mapa(
+        mapa,
+        filtrado=filtrado,
+        hay_filtros=hay_filtros,
+        filtro_prioridad=filtro_prioridad,
+    )
     mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
-    if hay_filtros:
-        mask = mapa["iso3"].notna() & ~mapa["ISO_CC"].isin(seleccionados)
-        mapa.loc[mask, "prioridad_mapa"] = "Fuera del filtro"
 
     def amenazas_texto(r):
         activas = _amenazas_activas(r, list(AMENAZAS.keys()))
