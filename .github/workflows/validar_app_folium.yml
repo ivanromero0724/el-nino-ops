@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "app.py"
+      - "app_legacy.py"
       - "requirements.txt"
       - ".github/workflows/validar_app_folium.yml"
 
