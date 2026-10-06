@@ -185,6 +185,13 @@ st.markdown(
         .ops-subtitle {{
             color:#5A7286; font-size:.94rem; margin-top:.42rem; line-height:1.45;
         }}
+        .ops-area {{
+            color:{AZUL_OPS};
+            font-size:.82rem;
+            font-weight:700;
+            margin-top:.46rem;
+            line-height:1.35;
+        }}
         .ops-logo {{width:220px; max-width:24vw; height:auto; display:block;}}
 
         .filter-label {{
@@ -948,6 +955,7 @@ st.markdown(
             <div class="ops-kicker">Monitoreo regional · Actualización mensual</div>
             <div class="ops-title">El Niño y salud pública en las Américas</div>
             <div class="ops-subtitle">Prioridades sanitarias, amenazas, impactos y respuesta de OPS/OMS.</div>
+            <div class="ops-area">PAHO Health Emergencies Department (PHE) · Emergency Operations Center (EOC)</div>
         </div>
         <div>{logo_html}</div>
     </div>
