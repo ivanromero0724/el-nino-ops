@@ -378,6 +378,183 @@ jobs:
               browser.close()
           PY
 
+      - name: E2E exhaustivo de todos los filtros
+        run: |
+          streamlit run app.py --server.headless true --server.port 8502 > /tmp/streamlit-filtros.log 2>&1 &
+          APP_PID=$!
+          trap "kill $APP_PID || true" EXIT
+
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8502/_stcore/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8502/_stcore/health
+
+          python - <<'PY'
+          from itertools import product
+          from playwright.sync_api import sync_playwright
+
+          SUBREGIONES = [
+              "América Central",
+              "América del Norte",
+              "Brasil y Cono Sur",
+              "Caribe",
+              "Subregión Andina",
+          ]
+          PRIORIDADES = ["Alta", "Media", "Baja", "Sin priorización"]
+          AMENAZAS = [
+              "Sequía / agua",
+              "Inundaciones / lluvias",
+              "Incendios / quemadas",
+              "Inseguridad alimentaria",
+              "Dengue / otras arbovirosis",
+              "Calidad del aire / riesgo respiratorio",
+              "Afectación de servicios de salud",
+          ]
+
+          def esperar_app(page, etiqueta):
+              titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
+              try:
+                  titulo.wait_for(state="visible", timeout=20000)
+              except Exception:
+                  page.screenshot(path="filtros_exhaustivos_fallo.png", full_page=True)
+                  print(open("/tmp/streamlit-filtros.log", encoding="utf-8", errors="replace").read()[-16000:])
+                  raise AssertionError(f"La app quedó en blanco en: {etiqueta}")
+
+              if page.locator('[data-testid="stException"]').count() > 0:
+                  page.screenshot(path="filtros_exhaustivos_fallo.png", full_page=True)
+                  textos = page.locator('[data-testid="stException"]').all_inner_texts()
+                  raise AssertionError(f"Excepción visible en {etiqueta}: {textos}")
+
+              if page.locator('[data-testid="stAppViewContainer"]').count() == 0:
+                  page.screenshot(path="filtros_exhaustivos_fallo.png", full_page=True)
+                  raise AssertionError(f"No existe AppViewContainer en: {etiqueta}")
+
+              # El mapa debe volver a montarse después de cada rerun, incluso
+              # cuando la combinación de filtros deje cero países.
+              for _ in range(40):
+                  for frame in page.frames:
+                      if frame == page.main_frame:
+                          continue
+                      if frame.locator(".leaflet-container").count() > 0:
+                          return
+                  page.wait_for_timeout(250)
+
+              page.screenshot(path="filtros_exhaustivos_fallo.png", full_page=True)
+              raise AssertionError(f"El mapa no volvió a montarse en: {etiqueta}")
+
+          def clear_multi(page, idx):
+              for _ in range(20):
+                  multis = page.locator('[data-testid="stMultiSelect"]')
+                  if multis.count() <= idx:
+                      raise AssertionError(f"No existe multiselect índice {idx}")
+                  widget = multis.nth(idx)
+                  chips = widget.locator('[data-testid="stMultiSelectDeleteIcon"]')
+                  if chips.count() == 0:
+                      return
+                  chips.last.click()
+                  page.wait_for_timeout(450)
+              raise AssertionError(f"No fue posible limpiar multiselect {idx}")
+
+          def select_multi(page, idx, value, clear_first=True):
+              if clear_first:
+                  clear_multi(page, idx)
+              multis = page.locator('[data-testid="stMultiSelect"]')
+              widget = multis.nth(idx)
+              entrada = widget.locator("input")
+              entrada.click()
+              entrada.fill(value)
+              page.wait_for_timeout(180)
+              entrada.press("Enter")
+              page.wait_for_timeout(750)
+
+          def reset_consulta(page):
+              # 0=subregión, 1=prioridad, 2=amenaza/impacto.
+              for idx in (0, 1, 2):
+                  clear_multi(page, idx)
+              esperar_app(page, "reset de filtros")
+
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              page = browser.new_page(viewport={"width": 1440, "height": 1100})
+              page.goto("http://127.0.0.1:8502", wait_until="networkidle", timeout=120000)
+              esperar_app(page, "carga inicial")
+
+              pruebas = 0
+
+              # Cada valor individual de cada filtro principal.
+              for sub in SUBREGIONES:
+                  reset_consulta(page)
+                  select_multi(page, 0, sub)
+                  esperar_app(page, f"Subregión={sub}")
+                  pruebas += 1
+
+              for pri in PRIORIDADES:
+                  reset_consulta(page)
+                  select_multi(page, 1, pri)
+                  esperar_app(page, f"Prioridad={pri}")
+                  pruebas += 1
+
+              for amenaza in AMENAZAS:
+                  reset_consulta(page)
+                  select_multi(page, 2, amenaza)
+                  esperar_app(page, f"Amenaza={amenaza}")
+                  pruebas += 1
+
+              # Todas las combinaciones Subregión × Prioridad.
+              for sub, pri in product(SUBREGIONES, PRIORIDADES):
+                  reset_consulta(page)
+                  select_multi(page, 0, sub)
+                  select_multi(page, 1, pri)
+                  esperar_app(page, f"Subregión={sub} | Prioridad={pri}")
+                  pruebas += 1
+
+              # Todas las combinaciones Subregión × Amenaza.
+              for sub, amenaza in product(SUBREGIONES, AMENAZAS):
+                  reset_consulta(page)
+                  select_multi(page, 0, sub)
+                  select_multi(page, 2, amenaza)
+                  esperar_app(page, f"Subregión={sub} | Amenaza={amenaza}")
+                  pruebas += 1
+
+              # Todas las combinaciones Prioridad × Amenaza.
+              for pri, amenaza in product(PRIORIDADES, AMENAZAS):
+                  reset_consulta(page)
+                  select_multi(page, 1, pri)
+                  select_multi(page, 2, amenaza)
+                  esperar_app(page, f"Prioridad={pri} | Amenaza={amenaza}")
+                  pruebas += 1
+
+              # Selector de amenazas del mapa: probar vacío y cada opción por separado.
+              reset_consulta(page)
+              clear_multi(page, 3)
+              esperar_app(page, "Mapa sin pictogramas")
+              pruebas += 1
+
+              for amenaza in AMENAZAS:
+                  clear_multi(page, 3)
+                  select_multi(page, 3, amenaza, clear_first=False)
+                  esperar_app(page, f"Selector mapa={amenaza}")
+                  pruebas += 1
+
+              # Estrés final: varios cambios rápidos consecutivos.
+              reset_consulta(page)
+              for sub in SUBREGIONES:
+                  select_multi(page, 0, sub)
+                  esperar_app(page, f"estrés subregión {sub}")
+                  clear_multi(page, 0)
+              for pri in PRIORIDADES:
+                  select_multi(page, 1, pri)
+                  esperar_app(page, f"estrés prioridad {pri}")
+                  clear_multi(page, 1)
+
+              print(f"OK filtros exhaustivos: {pruebas} escenarios validados")
+              page.screenshot(path="filtros_exhaustivos_ok.png", full_page=True)
+              browser.close()
+          PY
+
       - name: E2E live Streamlit Cloud
         run: |
           python - <<'PY'
@@ -488,4 +665,6 @@ jobs:
             mapa_live_solapes_fallo.png
             filtros_rerun_fallo.png
             filtro_subregion_fallo.png
+            filtros_exhaustivos_ok.png
+            filtros_exhaustivos_fallo.png
           if-no-files-found: ignore
