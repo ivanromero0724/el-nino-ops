@@ -754,14 +754,14 @@ def grafico_subregion(datos, altura=560):
     )
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=8, t=8, b=70),
+        margin=dict(l=0, r=8, t=8, b=46),
         paper_bgcolor="white",
         plot_bgcolor="white",
         legend_title_text="",
         xaxis_title="Países/territorios",
         yaxis_title=None,
         bargap=.38,
-        legend=dict(orientation="h", yanchor="top", y=-.17, xanchor="left", x=0, font=dict(size=10)),
+        legend=dict(orientation="h", yanchor="top", y=-.10, xanchor="left", x=0, font=dict(size=10)),
     )
     fig.update_xaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero", zeroline=False)
     fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
@@ -803,7 +803,7 @@ def matriz_amenazas(datos, altura=560):
     )
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=4, t=8, b=138),
+        margin=dict(l=0, r=4, t=8, b=104),
         paper_bgcolor="white",
         plot_bgcolor="white",
     )
@@ -813,14 +813,14 @@ def matriz_amenazas(datos, altura=560):
         fig.add_layout_image(dict(
             source=amenaza_icon_data_uri(nombre),
             xref="paper", yref="paper",
-            x=(i + .5) / len(nombres), y=-.072,
+            x=(i + .5) / len(nombres), y=-.050,
             sizex=.072, sizey=.072,
             xanchor="center", yanchor="middle", layer="above"
         ))
         etiqueta = etiquetas[i]
         fig.add_annotation(
             x=(i + .5) / len(nombres),
-            y=-.155,
+            y=-.122,
             xref="paper", yref="paper",
             text=etiqueta,
             showarrow=False,
@@ -1083,7 +1083,7 @@ section_header("Situación regional", "Comparación territorial y perfil de amen
 # Los dos gráficos usan exactamente la misma altura para que sus tarjetas
 # comiencen y terminen alineadas. La altura se adapta al número de países
 # visibles, pero se limita para evitar paneles demasiado altos o bajos.
-altura_situacion = max(520, min(620, 25 * max(1, len(filtrado)) + 90))
+altura_situacion = max(430, min(520, 20 * max(1, len(filtrado)) + 70))
 g1, g2 = st.columns([1.0, 1.45], gap="medium")
 with g1:
     with st.container(border=True):
