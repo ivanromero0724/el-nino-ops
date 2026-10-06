@@ -290,7 +290,7 @@ jobs:
               entrada_sub.fill("América Central")
               page.wait_for_timeout(250)
               entrada_sub.press("Enter")
-              page.get_by_role("button", name="Aplicar filtros").click()
+              page.locator('[data-testid="stFormSubmitButton"]').first.click()
               page.wait_for_timeout(1800)
 
               titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
@@ -330,7 +330,7 @@ jobs:
               chips = subregion.locator('[data-testid="stMultiSelectDeleteIcon"]')
               if chips.count() > 0:
                   chips.first.click()
-                  page.get_by_role("button", name="Aplicar filtros").click()
+                  page.locator('[data-testid="stFormSubmitButton"]').first.click()
                   page.wait_for_timeout(1200)
 
               print("OK filtro América Central")
@@ -348,7 +348,7 @@ jobs:
                   entrada.fill(valor)
                   page.wait_for_timeout(250)
                   entrada.press("Enter")
-                  page.get_by_role("button", name="Aplicar filtros").click()
+                  page.locator('[data-testid="stFormSubmitButton"]').first.click()
                   page.wait_for_timeout(1200)
 
                   titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
@@ -474,11 +474,11 @@ jobs:
               page.wait_for_timeout(120)
 
           def aplicar_consulta(page):
-              page.get_by_role("button", name="Aplicar filtros").click()
+              page.locator('[data-testid="stFormSubmitButton"]').first.click()
               page.wait_for_timeout(850)
 
           def actualizar_mapa(page):
-              page.get_by_role("button", name="Actualizar mapa").click()
+              page.locator('[data-testid="stFormSubmitButton"]').nth(1).click()
               page.wait_for_timeout(700)
 
           def reset_consulta(page):
