@@ -200,6 +200,9 @@ jobs:
               if not (bounds["south"] <= -55 and bounds["north"] >= 31 and bounds["west"] <= -116 and bounds["east"] >= -36):
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Encuadre incompleto México-Sudamérica: {bounds}")
+              if bounds["west"] <= -145:
+                  page.screenshot(path="mapa_hover_fallo.png", full_page=True)
+                  raise AssertionError(f"La vista inicial todavía deja entrar Hawái: {bounds}")
 
               limites_navegacion = folium_frame.evaluate("""() => {
                   const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getBounds);
@@ -213,9 +216,12 @@ jobs:
               }""")
               if not limites_navegacion:
                   raise AssertionError("No se pudieron leer los límites de navegación")
-              if limites_navegacion["north"] < 80 or limites_navegacion["west"] > -140:
+              if limites_navegacion["north"] < 80 or limites_navegacion["west"] > -130:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Canadá sigue limitado: {limites_navegacion}")
+              if limites_navegacion["west"] < -140:
+                  page.screenshot(path="mapa_hover_fallo.png", full_page=True)
+                  raise AssertionError(f"La navegación todavía permite llegar a Hawái: {limites_navegacion}")
 
               print("OK tooltip navegador:", texto[:300])
               print("OK bounds:", bounds)
@@ -306,9 +312,12 @@ jobs:
                       north: mb.getNorth(), east: mb.getEast()
                   };
               }""")
-              if not limites_navegacion or limites_navegacion["north"] < 80 or limites_navegacion["west"] > -140:
+              if not limites_navegacion or limites_navegacion["north"] < 80 or limites_navegacion["west"] > -130:
                   page.screenshot(path="mapa_live_fallo.png", full_page=True)
                   raise AssertionError(f"La versión live sigue limitada antes de Canadá: {limites_navegacion}")
+              if limites_navegacion["west"] < -140:
+                  page.screenshot(path="mapa_live_fallo.png", full_page=True)
+                  raise AssertionError(f"La versión live todavía permite llegar a Hawái: {limites_navegacion}")
 
               print("OK LIVE tooltip:", texto[:300])
               print("OK LIVE navegación Canadá:", limites_navegacion)
