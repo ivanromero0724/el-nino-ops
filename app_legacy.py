@@ -335,7 +335,7 @@ st.markdown(
             border-bottom:1px solid #EDF2F5;
             vertical-align:middle;
         }}
-        .status-table tbody tr:last-child td {{border-bottom:none;}}
+        .status-table tbody tr:last-child td {{border-bottom:1px solid #DCE8EF;}}
         .status-table tbody tr:hover td {{background:#FAFCFD;}}
         .status-country-name {{
             color:{TEXTO};
