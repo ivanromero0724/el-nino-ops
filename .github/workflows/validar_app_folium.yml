@@ -197,12 +197,74 @@ jobs:
               }""")
               if not bounds:
                   raise AssertionError("No se pudieron leer los límites del mapa Leaflet")
+
+              centro = folium_frame.evaluate("""() => {
+                  const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getCenter);
+                  if (!key) return null;
+                  const c = window[key].getCenter();
+                  return {lat: c.lat, lng: c.lng};
+              }""")
+              if not centro or not (-80 <= centro["lng"] <= -72):
+                  page.screenshot(path="mapa_centrado_fallo.png", full_page=True)
+                  raise AssertionError(f"El mapa no quedó centrado sobre América: {centro}")
+
+              solapes = folium_frame.evaluate("""() => {
+                  const els = [...document.querySelectorAll('.ops-callout')];
+                  const cajas = els.map(el => {
+                      const r = el.getBoundingClientRect();
+                      return {iso: el.dataset.iso || '', x:r.x, y:r.y, w:r.width, h:r.height};
+                  });
+                  const out = [];
+                  for (let i=0; i<cajas.length; i++) {
+                      for (let j=i+1; j<cajas.length; j++) {
+                          const a=cajas[i], b=cajas[j];
+                          const ix = Math.max(0, Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x));
+                          const iy = Math.max(0, Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+                          if (ix > 2 && iy > 2) out.push({a:a.iso,b:b.iso,ix,iy});
+                      }
+                  }
+                  return out;
+              }""")
+              if solapes:
+                  page.screenshot(path="mapa_solapes_fallo.png", full_page=True)
+                  raise AssertionError(f"Callouts superpuestos: {solapes}")
               if not (bounds["south"] <= -55 and bounds["north"] >= 31 and bounds["west"] <= -116 and bounds["east"] >= -36):
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Encuadre incompleto México-Sudamérica: {bounds}")
               if bounds["west"] <= -145:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"La vista inicial todavía deja entrar Hawái: {bounds}")
+
+              centro_live = folium_frame.evaluate("""() => {
+                  const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getCenter);
+                  if (!key) return null;
+                  const c = window[key].getCenter();
+                  return {lat: c.lat, lng: c.lng};
+              }""")
+              if not centro_live or not (-80 <= centro_live["lng"] <= -72):
+                  page.screenshot(path="mapa_live_centrado_fallo.png", full_page=True)
+                  raise AssertionError(f"La versión live no quedó centrada: {centro_live}")
+
+              solapes_live = folium_frame.evaluate("""() => {
+                  const els = [...document.querySelectorAll('.ops-callout')];
+                  const cajas = els.map(el => {
+                      const r = el.getBoundingClientRect();
+                      return {iso: el.dataset.iso || '', x:r.x, y:r.y, w:r.width, h:r.height};
+                  });
+                  const out = [];
+                  for (let i=0; i<cajas.length; i++) {
+                      for (let j=i+1; j<cajas.length; j++) {
+                          const a=cajas[i], b=cajas[j];
+                          const ix = Math.max(0, Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x));
+                          const iy = Math.max(0, Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+                          if (ix > 2 && iy > 2) out.push({a:a.iso,b:b.iso,ix,iy});
+                      }
+                  }
+                  return out;
+              }""")
+              if solapes_live:
+                  page.screenshot(path="mapa_live_solapes_fallo.png", full_page=True)
+                  raise AssertionError(f"Callouts live superpuestos: {solapes_live}")
 
               limites_navegacion = folium_frame.evaluate("""() => {
                   const key = Object.keys(window).find(k => k.startsWith('map_') && window[k] && window[k].getBounds);
@@ -334,7 +396,11 @@ jobs:
             mapa_hover_ok.png
             mapa_hover_fallo.png
             mapa_click_fallo.png
+            mapa_centrado_fallo.png
+            mapa_solapes_fallo.png
             mapa_live_ok.png
             mapa_live_fallo.png
             mapa_live_click_fallo.png
+            mapa_live_centrado_fallo.png
+            mapa_live_solapes_fallo.png
           if-no-files-found: ignore
