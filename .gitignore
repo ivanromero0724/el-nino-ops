@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.streamlit/secrets.toml
+data/geografia/_natural_earth_50m.geojson
+outputs/mapas/*_rev*.png

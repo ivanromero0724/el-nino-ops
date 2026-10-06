@@ -1,7 +1,5 @@
 from pathlib import Path
 import math
-import os
-import hashlib
 
 import numpy as np
 import pandas as pd
@@ -26,12 +24,7 @@ SALIDA_DIR.mkdir(parents=True, exist_ok=True)
 # None = toma automáticamente el SitRep más reciente de la base.
 SITREP_ID = None
 
-POSIBLES_LOGOS = [
-    BASE / "assets" / "ops_oms.png",
-    BASE / "ops_oms.png",
-    BASE / "ops_oms(1).png",
-]
-RUTA_LOGO = next((p for p in POSIBLES_LOGOS if p.exists()), None)
+RUTA_LOGO = BASE / "assets" / "ops_oms.png"
 
 # ============================================================
 # ESTILO OPS
@@ -337,39 +330,38 @@ def main():
         ax_leg.text(.255,yy,ETIQUETAS_AMENAZA[a],fontsize=10,color=TEXTO,va="center",transform=ax_leg.transAxes)
 
     ax_logo.axis("off")
-    if RUTA_LOGO:
+    if RUTA_LOGO.exists():
         logo=np.asarray(recortar_logo(RUTA_LOGO))
         ax_logo.add_artist(AnnotationBbox(OffsetImage(logo,zoom=.50),(.5,.48),xycoords=ax_logo.transAxes,frameon=False,box_alignment=(.5,.5)))
 
-    # Forzar el render final antes de exportar ambos formatos.
+    # Exportar los dos productos canónicos del SitRep.
     fig.canvas.draw()
 
-    # PNG: reemplazar explícitamente el archivo previo y validar el nuevo.
     salida_png.unlink(missing_ok=True)
-    fig.savefig(salida_png, format="png", dpi=350, facecolor="white", bbox_inches="tight", pad_inches=0)
+    fig.savefig(
+        salida_png,
+        format="png",
+        dpi=350,
+        facecolor="white",
+        bbox_inches="tight",
+        pad_inches=0,
+    )
     with Image.open(salida_png) as im_png:
         im_png.verify()
-    png_sha = hashlib.sha256(salida_png.read_bytes()).hexdigest()
 
-    # Copia única por ejecución para evitar confundir una previsualización cacheada de GitHub.
-    for viejo in SALIDA_DIR.glob(f"{salida_png.stem}_rev*.png"):
-        viejo.unlink(missing_ok=True)
-    revision = os.environ.get("GITHUB_RUN_NUMBER", "local")
-    salida_png_revision = SALIDA_DIR / f"{salida_png.stem}_rev{revision}.png"
-    salida_png_revision.write_bytes(salida_png.read_bytes())
-
-    # PDF desde exactamente la misma figura y extensión.
     salida_pdf.unlink(missing_ok=True)
-    fig.savefig(salida_pdf, format="pdf", facecolor="white", bbox_inches="tight", pad_inches=0)
-
-    print(f"Extensión final: X={ax.get_xlim()} Y={ax.get_ylim()}")
-    print(f"PNG SHA256: {png_sha}")
-    print(f"PNG revisión: {salida_png_revision.resolve()}")
+    fig.savefig(
+        salida_pdf,
+        format="pdf",
+        facecolor="white",
+        bbox_inches="tight",
+        pad_inches=0,
+    )
     plt.close(fig)
 
     print(f"SitRep: {sitrep_id}")
     print(f"Fecha de corte: {fecha}")
-    print(f"Países/territorios: {len(df)}")
+    print(f"Países: {len(df)}")
     print(f"PNG: {salida_png.resolve()}")
     print(f"PDF: {salida_pdf.resolve()}")
 

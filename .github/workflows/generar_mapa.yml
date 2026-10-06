@@ -8,12 +8,15 @@ on:
       - "scripts/mapa_sitrep.py"
       - "scripts/preparar_geografia.py"
       - "assets/ops_oms.png"
-      - "assets/logo_payload_final/**"
       - "requirements.txt"
       - ".github/workflows/generar_mapa.yml"
 
 permissions:
   contents: write
+
+concurrency:
+  group: generar-mapa-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   generar:
@@ -33,146 +36,39 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Reconstruir y validar logo OPS/OMS
-        run: |
-          base64 --decode assets/logo_payload_final/logo.b64 > assets/ops_oms.png
-          python - <<'PY'
-          from pathlib import Path
-          import hashlib
-          from PIL import Image
-
-          p = Path("assets/ops_oms.png")
-          digest = hashlib.sha256(p.read_bytes()).hexdigest()
-          esperado = "a9e2685bf6ae716326b8ca8c698d2080ea2d51d47a49690cf4099bb46c4c8061"
-          if digest != esperado:
-              raise RuntimeError(f"SHA256 inesperado para el logo: {digest}")
-
-          im = Image.open(p)
-          im.verify()
-          im = Image.open(p)
-          print("Logo válido:", p, im.size, im.mode, digest)
-          PY
-
-      - name: Ajustar estilo visual y asegurar PNG actualizado
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          p = Path("scripts/mapa_sitrep.py")
-          txt = p.read_text(encoding="utf-8")
-
-          if "import os\n" not in txt:
-              txt = txt.replace("from pathlib import Path\nimport math\n", "from pathlib import Path\nimport math\nimport os\nimport hashlib\n")
-          elif "import hashlib\n" not in txt:
-              txt = txt.replace("import os\n", "import os\nimport hashlib\n")
-
-          txt = txt.replace('AZUL_MAR = "#E5F6FB"', 'AZUL_MAR = "#D9EEF7"')
-
-          txt = txt.replace(
-              'ax=fig.add_axes([.020,.035,.620,.930])',
-              'ax=fig.add_axes([.020,0,.620,1.0])'
-          )
-
-          extensiones_previas = [
-              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,32); ax.set_aspect("equal",adjustable="box")',
-              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-30); ax.set_ylim(-58,36); ax.set_aspect("equal",adjustable="box")',
-              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-130,-22); ax.set_ylim(-58,56); ax.set_aspect("equal",adjustable="box")',
-              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-124,-27.5); ax.set_ylim(-58,44); ax.set_aspect("equal",adjustable="box")',
-              'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-123,-30); ax.set_ylim(-58,40); ax.set_aspect("equal",adjustable="box")',
-          ]
-          for old in extensiones_previas:
-              txt = txt.replace(
-                  old,
-                  'ax.set_facecolor(AZUL_MAR); ax.set_xlim(-121.5,-31); ax.set_ylim(-58,37.5); ax.set_aspect("equal",adjustable="box")'
-              )
-
-          rectangulos_previos = [
-              'Rectangle((-124,-58),94,90,',
-              'Rectangle((-124,-58),94,94,',
-              'Rectangle((-130,-58),108,114,',
-              'Rectangle((-124,-58),96.5,102,',
-              'Rectangle((-123,-58),93,98,',
-          ]
-          for old in rectangulos_previos:
-              txt = txt.replace(old, 'Rectangle((-121.5,-58),90.5,95.5,')
-
-          fondo_columna = '    fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))'
-          if fondo_columna not in txt:
-              txt = txt.replace(
-                  '    fig=plt.figure(figsize=(13,8.5),facecolor="white")\n',
-                  '    fig=plt.figure(figsize=(13,8.5),facecolor="white")\n' + fondo_columna + '\n'
-              )
-
-          txt = txt.replace('pad_inches=.03', 'pad_inches=0')
-
-          txt = txt.replace(
-              'ax_logo=fig.add_axes([.735,.035,.165,.135])',
-              'ax_logo=fig.add_axes([.650,.005,.340,.220])'
-          )
-          txt = txt.replace(
-              'ax_logo=fig.add_axes([.680,.010,.300,.195])',
-              'ax_logo=fig.add_axes([.650,.005,.340,.220])'
-          )
-          txt = txt.replace('OffsetImage(logo,zoom=.145)', 'OffsetImage(logo,zoom=.50)')
-          txt = txt.replace('OffsetImage(logo,zoom=.32)', 'OffsetImage(logo,zoom=.50)')
-
-          bloque_anterior = "\n".join([
-              '    fig.savefig(salida_pdf,format="pdf",facecolor="white",bbox_inches="tight",pad_inches=0)',
-              '    fig.savefig(salida_png,format="png",dpi=350,facecolor="white",bbox_inches="tight",pad_inches=0)',
-              '    plt.close(fig)',
-          ])
-
-          bloque_nuevo = "\n".join([
-              '    # Forzar el render final antes de exportar ambos formatos.',
-              '    fig.canvas.draw()',
-              '',
-              '    # PNG: reemplazar explícitamente el archivo previo y validar el nuevo.',
-              '    salida_png.unlink(missing_ok=True)',
-              '    fig.savefig(salida_png, format="png", dpi=350, facecolor="white", bbox_inches="tight", pad_inches=0)',
-              '    with Image.open(salida_png) as im_png:',
-              '        im_png.verify()',
-              '    png_sha = hashlib.sha256(salida_png.read_bytes()).hexdigest()',
-              '',
-              '    # Copia única por ejecución para evitar confundir una previsualización cacheada de GitHub.',
-              '    for viejo in SALIDA_DIR.glob(f"{salida_png.stem}_rev*.png"):',
-              '        viejo.unlink(missing_ok=True)',
-              '    revision = os.environ.get("GITHUB_RUN_NUMBER", "local")',
-              '    salida_png_revision = SALIDA_DIR / f"{salida_png.stem}_rev{revision}.png"',
-              '    salida_png_revision.write_bytes(salida_png.read_bytes())',
-              '',
-              '    # PDF desde exactamente la misma figura y extensión.',
-              '    salida_pdf.unlink(missing_ok=True)',
-              '    fig.savefig(salida_pdf, format="pdf", facecolor="white", bbox_inches="tight", pad_inches=0)',
-              '',
-              '    print(f"Extensión final: X={ax.get_xlim()} Y={ax.get_ylim()}")',
-              '    print(f"PNG SHA256: {png_sha}")',
-              '    print(f"PNG revisión: {salida_png_revision.resolve()}")',
-              '    plt.close(fig)',
-          ])
-
-          if "salida_png_revision" not in txt:
-              if bloque_anterior not in txt:
-                  raise RuntimeError("No se encontró el bloque de exportación esperado para actualizar PNG/PDF")
-              txt = txt.replace(bloque_anterior, bloque_nuevo)
-
-          p.write_text(txt, encoding="utf-8")
-          print("Estilo actualizado: más zoom + PNG regenerado, validado y con copia sin caché")
-          PY
-
       - name: Preparar geografía
         run: python scripts/preparar_geografia.py
 
       - name: Generar mapa
         run: python scripts/mapa_sitrep.py
 
-      - name: Guardar GeoPackage, logo, código y mapas en el repositorio
+      - name: Validar productos
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          geo = Path("data/geografia/paises_americas.gpkg")
+          out = Path("outputs/mapas")
+          pngs = list(out.glob("Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep*.png"))
+          pdfs = list(out.glob("Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep*.pdf"))
+          revisiones = list(out.glob("*_rev*.png"))
+
+          assert geo.exists() and geo.stat().st_size > 0, "GeoPackage no generado"
+          assert pngs, "No se generó PNG"
+          assert pdfs, "No se generó PDF"
+          assert not revisiones, f"No deben existir copias revXX: {revisiones}"
+          print("OK:", geo, pngs[-1], pdfs[-1])
+          PY
+
+      - name: Guardar productos generados
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/geografia/paises_americas.gpkg assets/ops_oms.png scripts/mapa_sitrep.py outputs/mapas/
+          git add data/geografia/paises_americas.gpkg outputs/mapas/
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
-          else
-            git commit -m "Más zoom y corregir actualización del PNG"
-            git push
+            exit 0
           fi
+          git commit -m "Actualizar productos del SitRep"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"

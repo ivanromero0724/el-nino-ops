@@ -2,7 +2,6 @@ from pathlib import Path
 from io import BytesIO
 import base64
 import html
-import json
 
 import numpy as np
 import pandas as pd
@@ -24,10 +23,8 @@ RUTA_LOGO = BASE / "assets" / "ops_oms.png"
 
 AZUL_OPS = "#004B87"
 AZUL_SEC = "#0072CE"
-AZUL_MAR = "#D9EEF7"
 TEXTO = "#17324D"
 GRIS = "#CACACA"
-GRIS_CLARO = "#F5F8FA"
 BORDE = "#D9E6EE"
 
 COLORES_PRIORIDAD = {
@@ -57,65 +54,6 @@ AMENAZAS_CORTAS = {
     "Dengue / otras arbovirosis": "Arbovirosis",
     "Calidad del aire / riesgo respiratorio": "Aire",
     "Afectación de servicios de salud": "Afectación servicios",
-}
-
-AMENAZA_CLAVE_ESTATICA = {
-    "Sequía / agua": "agua",
-    "Inundaciones / lluvias": "inundaciones",
-    "Incendios / quemadas": "incendios",
-    "Inseguridad alimentaria": "alimentos",
-    "Dengue / otras arbovirosis": "arbovirosis",
-    "Calidad del aire / riesgo respiratorio": "respiratorio",
-    "Afectación de servicios de salud": "servicios",
-}
-
-
-# Posiciones de referencia para evitar solapamientos en países pequeños.
-# Para cualquier país no incluido aquí se usa un punto representativo
-# calculado a partir de su geometría.
-POSICIONES_AMENAZAS = {
-    "MEX": (-102.0, 24.0),
-    "GTM": (-91.4, 16.4),
-    "HND": (-86.7, 15.2),
-    "SLV": (-89.1, 13.6),
-    "CRI": (-84.3, 9.7),
-    "PAN": (-80.6, 8.7),
-    "JAM": (-77.2, 18.3),
-    "PRI": (-66.4, 18.2),
-    "TTO": (-61.2, 10.7),
-    "COL": (-74.0, 4.7),
-    "ECU": (-78.3, -1.3),
-    "PER": (-75.2, -9.2),
-    "BOL": (-64.8, -16.6),
-    "BRA": (-52.0, -10.0),
-    "CHL": (-71.0, -29.0),
-    "ARG": (-64.0, -34.0),
-    "URY": (-56.0, -32.8),
-    "PRY": (-58.4, -23.4),
-    "USA": (-98.0, 31.0),
-}
-
-
-# Posición de las etiquetas de amenazas. Se ubican principalmente sobre océano
-# o espacios libres para evitar tapar los países y mejorar la lectura.
-POSICIONES_CALLOUTS = {
-    "MEX": (-112.5, 27.0),
-    "GTM": (-107.0, 20.0),
-    "HND": (-104.0, 16.1),
-    "SLV": (-103.0, 11.7),
-    "CRI": (-98.3, 7.4),
-    "PAN": (-92.0, 3.5),
-    "JAM": (-76.0, 25.5),
-    "PRI": (-64.0, 25.5),
-    "TTO": (-49.0, 13.0),
-    "COL": (-90.0, 0.0),
-    "ECU": (-91.0, -6.0),
-    "PER": (-91.0, -12.5),
-    "BOL": (-48.0, -18.0),
-    "BRA": (-39.5, -8.5),
-    "CHL": (-88.0, -29.5),
-    "ARG": (-79.0, -40.0),
-    "URY": (-45.0, -34.0),
 }
 
 CIFRAS = {
@@ -679,244 +617,6 @@ def resumen_iconos_pais(fila, seleccion=None, max_iconos=2):
 
     return etiqueta, nombres
 
-
-def posiciones_pais(geo):
-    posiciones = dict(POSICIONES_AMENAZAS)
-    faltantes = set(geo["ISO_CC"].dropna().astype(str)) - set(posiciones)
-    if faltantes:
-        dis = geo[geo["ISO_CC"].isin(faltantes)][["ISO_CC", "geometry"]].dissolve(by="ISO_CC")
-        for iso, geom in dis.geometry.items():
-            if geom is not None and not geom.is_empty:
-                pt = geom.representative_point()
-                posiciones[str(iso)] = (float(pt.x), float(pt.y))
-    return posiciones
-
-
-def construir_mapa(
-    geo,
-    contexto,
-    datos_filtrados,
-    hay_filtros=False,
-    mostrar_amenazas=False,
-    amenazas_visibles=None,
-):
-    mapa = geo[["COUNTRY", "ISO_CC", "geometry"]].copy()
-    cols = ["iso3", "pais", "prioridad", "situacion_predominante", "impacto_salud_documentado"]
-    cols += [col for col, _ in AMENAZAS.values()]
-    cols = [c for c in cols if c in contexto.columns]
-    info = contexto[cols].drop_duplicates("iso3")
-    mapa = mapa.merge(info, left_on="ISO_CC", right_on="iso3", how="left")
-
-    seleccionados = set(datos_filtrados["iso3"].dropna().astype(str))
-    mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
-    if hay_filtros:
-        mask_fuera = mapa["iso3"].notna() & ~mapa["ISO_CC"].isin(seleccionados)
-        mapa.loc[mask_fuera, "prioridad_mapa"] = "Fuera del filtro"
-
-    mapa["nombre_mapa"] = mapa["pais"].fillna(mapa["COUNTRY"])
-    mapa["situacion_mapa"] = mapa["situacion_predominante"].fillna("Sin hallazgos priorizados en este SitRep")
-    mapa["amenazas_mapa"] = mapa.apply(
-        lambda r: " · ".join(
-            f"{AMENAZAS_CORTAS[nombre]}"
-            for nombre, icono in amenazas_de_fila(r)
-        ) or "Sin amenazas / impactos priorizados",
-        axis=1,
-    )
-    geojson = json.loads(mapa.to_json())
-
-    fig = px.choropleth(
-        mapa,
-        geojson=geojson,
-        locations="ISO_CC",
-        featureidkey="properties.ISO_CC",
-        color="prioridad_mapa",
-        hover_name="nombre_mapa",
-        hover_data={
-            "ISO_CC": False,
-            "prioridad_mapa": True,
-            "amenazas_mapa": True,
-            "situacion_mapa": True,
-        },
-        labels={
-            "prioridad_mapa": "Prioridad",
-            "amenazas_mapa": "Amenazas / impactos",
-            "situacion_mapa": "Situación",
-        },
-        color_discrete_map=COLORES_PRIORIDAD,
-        category_orders={"prioridad_mapa": ORDEN_PRIORIDAD + ["Fuera del filtro"]},
-    )
-
-    if mostrar_amenazas:
-        if amenazas_visibles is None:
-            amenazas_visibles = list(AMENAZAS.keys())
-
-        posiciones = posiciones_pais(geo)
-        line_lon, line_lat = [], []
-        anchor_lon, anchor_lat = [], []
-        label_lon, label_lat, label_text, label_hover = [], [], [], []
-
-        for _, fila in datos_filtrados.iterrows():
-            iso = str(fila.get("iso3", ""))
-            if iso not in posiciones or iso not in POSICIONES_CALLOUTS:
-                continue
-
-            activas = amenazas_de_fila(fila, amenazas_visibles)
-            if not activas:
-                continue
-
-            lon0, lat0 = posiciones[iso]
-            lon1, lat1 = POSICIONES_CALLOUTS[iso]
-            pais = texto(fila.get("pais"), iso)
-            iconos = " · ".join(AMENAZAS_CORTAS[nombre] for nombre, _ in activas)
-            detalle = "<br>".join(
-                f"{html.escape(nombre)}" for nombre, _ in activas
-            )
-
-            # Segmentos independientes separados por None.
-            line_lon.extend([lon0, lon1, None])
-            line_lat.extend([lat0, lat1, None])
-            anchor_lon.append(lon0)
-            anchor_lat.append(lat0)
-            label_lon.append(lon1)
-            label_lat.append(lat1)
-            label_text.append(f"<b>{html.escape(pais)}</b><br>{iconos}")
-            label_hover.append(f"<b>{html.escape(pais)}</b><br>{detalle}")
-
-        if label_lon:
-            fig.add_trace(
-                go.Scattergeo(
-                    lon=line_lon,
-                    lat=line_lat,
-                    mode="lines",
-                    line=dict(color="rgba(0,75,135,.72)", width=1.15),
-                    hoverinfo="skip",
-                    showlegend=False,
-                )
-            )
-            fig.add_trace(
-                go.Scattergeo(
-                    lon=anchor_lon,
-                    lat=anchor_lat,
-                    mode="markers",
-                    marker=dict(size=5, color=AZUL_OPS),
-                    hoverinfo="skip",
-                    showlegend=False,
-                )
-            )
-            fig.add_trace(
-                go.Scattergeo(
-                    lon=label_lon,
-                    lat=label_lat,
-                    mode="text",
-                    text=label_text,
-                    textposition="middle center",
-                    textfont=dict(size=11, color=AZUL_OPS),
-                    hovertext=label_hover,
-                    hovertemplate="%{hovertext}<extra></extra>",
-                    hoverlabel=dict(bgcolor="white", font_size=12, font_color=TEXTO),
-                    showlegend=False,
-                )
-            )
-
-    fig.update_geos(
-        projection_type="equirectangular",
-        lonaxis_range=[-121.5, -31],
-        lataxis_range=[-58, 37.5],
-        showcoastlines=False,
-        showcountries=True,
-        countrycolor="white",
-        countrywidth=0.65,
-        showland=False,
-        showocean=True,
-        oceancolor=AZUL_MAR,
-        bgcolor=AZUL_MAR,
-        visible=False,
-    )
-    fig.update_traces(marker_line_color="white", marker_line_width=0.7, selector=dict(type="choropleth"))
-    fig.update_layout(
-        height=590,
-        margin=dict(l=0, r=0, t=0, b=0),
-        paper_bgcolor=AZUL_MAR,
-        plot_bgcolor=AZUL_MAR,
-        showlegend=False,
-        hoverlabel=dict(bgcolor="white", font_size=13, font_color=TEXTO),
-    )
-    return fig
-
-
-
-def construir_mapa_callouts_estatico(
-    geo,
-    contexto,
-    datos_filtrados,
-    hay_filtros=False,
-    amenazas_visibles=None,
-):
-    """Mapa del dashboard con la misma simbología vectorial del SitRep PDF/PNG."""
-    mapa = geo[["COUNTRY", "ISO_CC", "geometry"]].copy()
-    info = contexto[["iso3", "prioridad"]].drop_duplicates("iso3")
-    mapa = mapa.merge(info, left_on="ISO_CC", right_on="iso3", how="left")
-
-    mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
-    if hay_filtros:
-        seleccionados = set(datos_filtrados["iso3"].dropna().astype(str))
-        mask_fuera = mapa["iso3"].notna() & ~mapa["ISO_CC"].isin(seleccionados)
-        mapa.loc[mask_fuera, "prioridad_mapa"] = "Fuera del filtro"
-
-    fig, ax = plt.subplots(figsize=(8.7, 9.15), facecolor=AZUL_MAR)
-    ax.set_facecolor(AZUL_MAR)
-    ax.set_xlim(-121.5, -31)
-    ax.set_ylim(-58, 37.5)
-    ax.set_aspect("equal", adjustable="box")
-
-    # Base regional, incluida Guayana Francesa cuando está en el GeoPackage.
-    mapa.plot(ax=ax, color=COLORES_PRIORIDAD["Sin priorización"], edgecolor="white", linewidth=.46, zorder=1)
-    for prioridad, color in COLORES_PRIORIDAD.items():
-        sub = mapa[mapa["prioridad_mapa"] == prioridad]
-        if not sub.empty:
-            sub.plot(ax=ax, color=color, edgecolor="white", linewidth=.82, zorder=3)
-
-    amenazas_visibles = amenazas_visibles if amenazas_visibles is not None else list(AMENAZAS.keys())
-
-    # Se usan exactamente LABELS, ROUTES, TARGET y poner_iconos del mapa PDF/PNG.
-    for _, fila in datos_filtrados.iterrows():
-        iso = str(fila.get("iso3", "")).upper().strip()
-        if iso not in mapa_ref.LABELS or iso not in mapa_ref.ROUTES:
-            continue
-
-        claves = []
-        for nombre in amenazas_visibles:
-            col, _ = AMENAZAS[nombre]
-            if col in fila.index and pd.notna(fila[col]) and int(fila[col]) == 1:
-                claves.append(AMENAZA_CLAVE_ESTATICA[nombre])
-        if not claves:
-            continue
-
-        x, y, nombre_pais = mapa_ref.LABELS[iso]
-        ax.text(
-            x, y, nombre_pais,
-            fontsize=9.0, fontweight="bold", color=mapa_ref.TEXTO,
-            ha="left", va="center", zorder=30,
-        )
-        mapa_ref.poner_iconos(
-            ax,
-            x + .15 + mapa_ref.DESPLAZAMIENTO_ICONOS_X.get(iso, 0),
-            y + mapa_ref.DESPLAZAMIENTO_ICONOS_Y,
-            claves,
-            size=mapa_ref.TAMANOS_ICONOS.get(iso, 26),
-        )
-        ruta = mapa_ref.ROUTES[iso]
-        ax.plot(
-            [pt[0] for pt in ruta], [pt[1] for pt in ruta],
-            color=mapa_ref.AZUL_LINEA, linewidth=.72,
-            solid_capstyle="round", solid_joinstyle="round", zorder=10,
-        )
-        tx, ty = mapa_ref.TARGET[iso]
-        ax.scatter([tx], [ty], s=11, color=mapa_ref.AZUL_LINEA, zorder=11)
-
-    ax.set_axis_off()
-    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
-    return fig
 
 def grafico_subregion(datos, altura=560):
     if datos.empty:
@@ -1577,43 +1277,19 @@ k5.metric("Países con impacto en salud documentado", int(filtrado["impacto_salu
 # Mapa y resumen
 section_header("Panorama regional", "Distribución de prioridades y amenazas reportadas")
 
-# El mapa usa directamente el filtro general de Amenaza / impacto. Si no hay
-# selección, muestra todos los pictogramas; si hay selección, muestra solo los
-# correspondientes a ese mismo filtro. Así se evita duplicar controles.
-modo_mapa = "Prioridad + amenazas"
+# El mapa usa el filtro general de Amenaza / impacto; si no hay selección,
+# muestra todos los pictogramas.
 amenazas_mapa = filtro_amenaza if filtro_amenaza else list(AMENAZAS.keys())
 
 col_mapa, col_resumen = st.columns([4.15, 1.35], gap="medium")
 with col_mapa:
     with st.container(border=True):
         st.markdown('<span class="map-card-marker"></span>', unsafe_allow_html=True)
-        if modo_mapa == "Prioridad + amenazas":
-            renderer = getattr(st, "_ops_render_interactive_map", None)
-            if renderer is not None:
-                # Render directo: evita construir primero una figura Matplotlib
-                # pesada que luego era reemplazada por Folium en cada rerun.
-                renderer(globals())
-            else:
-                # Fallback por si app_legacy.py se ejecuta de forma independiente.
-                fig_mapa = construir_mapa_callouts_estatico(
-                    geo,
-                    actual,
-                    filtrado,
-                    hay_filtros,
-                    amenazas_visibles=amenazas_mapa,
-                )
-                st.pyplot(fig_mapa, use_container_width=True)
-                plt.close(fig_mapa)
+        renderer = getattr(st, "_ops_render_interactive_map", None)
+        if renderer is None:
+            st.error("No fue posible inicializar el mapa interactivo.")
         else:
-            fig_mapa = construir_mapa(
-                geo,
-                actual,
-                filtrado,
-                hay_filtros,
-                mostrar_amenazas=False,
-                amenazas_visibles=[],
-            )
-            st.plotly_chart(fig_mapa, use_container_width=True, config=CHART_CONFIG)
+            renderer(globals())
 with col_resumen:
     filas_amenazas = []
     for nombre, (col, icono) in AMENAZAS.items():
