@@ -758,7 +758,7 @@ def _render_mapa_interactivo(frame_globals):
     return st.iframe(
         html_mapa,
         width="stretch",
-        height=666,
+        height=652,
     )
 
 
