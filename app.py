@@ -214,7 +214,7 @@ def _construir_folium(frame_globals):
         min_lat=-62,
         max_lat=85,
         min_lon=-135,
-        max_lon=-30,
+        max_lon=45,
         max_bounds=True,
         world_copy_jump=False,
         zoom_control=True,
