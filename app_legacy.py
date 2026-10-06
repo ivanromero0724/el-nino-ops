@@ -754,16 +754,16 @@ def grafico_subregion(datos, altura=560):
     )
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=8, t=8, b=46),
+        margin=dict(l=0, r=8, t=8, b=72),
         paper_bgcolor="white",
         plot_bgcolor="white",
         legend_title_text="",
         xaxis_title="Países/territorios",
         yaxis_title=None,
         bargap=.38,
-        legend=dict(orientation="h", yanchor="top", y=-.10, xanchor="left", x=0, font=dict(size=10)),
+        legend=dict(orientation="h", yanchor="top", y=-.20, xanchor="center", x=.5, font=dict(size=10)),
     )
-    fig.update_xaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero", zeroline=False)
+    fig.update_xaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero", zeroline=False, title_standoff=6)
     fig.update_yaxes(showgrid=False, tickfont=dict(size=11))
     return fig
 
