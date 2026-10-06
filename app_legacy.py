@@ -388,6 +388,28 @@ st.markdown(
             font-size:.76rem;
             margin:.15rem 0 .58rem 0;
         }}
+        .subregion-legend {{
+            display:flex;
+            flex-wrap:wrap;
+            align-items:center;
+            gap:.42rem 1rem;
+            margin:-.1rem 0 .7rem 0;
+            color:#60788A;
+            font-size:.76rem;
+        }}
+        .subregion-legend-item {{
+            display:inline-flex;
+            align-items:center;
+            gap:.38rem;
+            white-space:nowrap;
+        }}
+        .subregion-legend-dot {{
+            width:9px;
+            height:9px;
+            border-radius:50%;
+            display:inline-block;
+            flex:0 0 9px;
+        }}
         @media (max-width: 900px) {{
             .status-table {{min-width:760px;}}
         }}
@@ -542,6 +564,23 @@ ATRIBUCION_COLORES = {
     "No confirmada / descartada": "#AAB7C2",
     "No aplica / sin información": "#D8E1E7",
     "Otra / por revisar": "#7B8C99",
+}
+
+SUBREGION_ORDEN = [
+    "América del Norte",
+    "América Central",
+    "Caribe",
+    "Subregión Andina",
+    "Brasil y Cono Sur",
+]
+
+SUBREGION_COLORES = {
+    "América del Norte": "#004B87",
+    "América Central": "#0072CE",
+    "Caribe": "#00A6A6",
+    "Subregión Andina": "#7A5AA6",
+    "Brasil y Cono Sur": "#5C9E45",
+    "Sin subregión": "#AAB7C2",
 }
 
 
@@ -1069,17 +1108,10 @@ def tabla_respuesta_pais_html(datos):
     )
     tmp["Atribución"] = tmp["atribucion_elnino"].apply(clasificar_atribucion)
 
-    orden_subregiones = [
-        "América del Norte",
-        "América Central",
-        "Caribe",
-        "Subregión Andina",
-        "Brasil y Cono Sur",
-    ]
     tmp["subregion"] = tmp["subregion"].fillna("Sin subregión")
     tmp["_suborden"] = pd.Categorical(
         tmp["subregion"],
-        categories=orden_subregiones + ["Sin subregión"],
+        categories=SUBREGION_ORDEN + ["Sin subregión"],
         ordered=True,
     )
     tmp = tmp.sort_values(
@@ -1154,8 +1186,24 @@ def tabla_respuesta_pais_html(datos):
     )
 
 
+def leyenda_subregiones_html(datos):
+    """Leyenda compartida de colores por subregión para los gráficos analíticos."""
+    if datos.empty:
+        return ""
+    presentes = set(datos["subregion"].fillna("Sin subregión").astype(str))
+    orden = [x for x in SUBREGION_ORDEN + ["Sin subregión"] if x in presentes]
+    items = []
+    for subregion in orden:
+        items.append(
+            f'<span class="subregion-legend-item">'
+            f'<span class="subregion-legend-dot" style="background:{SUBREGION_COLORES[subregion]}"></span>'
+            f'{html.escape(subregion)}</span>'
+        )
+    return '<div class="subregion-legend">' + "".join(items) + '</div>'
+
+
 def grafico_estado_binario(datos, tipo, altura=300):
-    """Resumen de países por declaratoria o impacto, con nombres en el hover."""
+    """Resumen por estado, dividido por subregión; el hover lista los países."""
     if datos.empty:
         return go.Figure()
 
@@ -1163,36 +1211,45 @@ def grafico_estado_binario(datos, tipo, altura=300):
         serie = datos["declaratoria_activa"].apply(es_activo)
         orden = ["Activa", "No activa"]
         etiquetas = serie.map({True: "Activa", False: "No activa"})
-        colores = {"Activa": AZUL_OPS, "No activa": "#D8E1E7"}
     elif tipo == "impacto":
         serie = datos["impacto_salud_documentado"].apply(es_impacto)
         orden = ["Documentado", "No documentado"]
         etiquetas = serie.map({True: "Documentado", False: "No documentado"})
-        colores = {"Documentado": AZUL_SEC, "No documentado": "#D8E1E7"}
     else:
         raise ValueError(f"Tipo no reconocido: {tipo}")
 
-    tmp = datos[["pais"]].copy()
+    tmp = datos[["pais", "subregion"]].copy()
+    tmp["subregion"] = tmp["subregion"].fillna("Sin subregión")
     tmp["Estado"] = etiquetas.values
 
+    presentes = set(tmp["subregion"].astype(str))
+    orden_sub = [x for x in SUBREGION_ORDEN + ["Sin subregión"] if x in presentes]
+
     fig = go.Figure()
-    for estado in orden:
-        sub = tmp[tmp["Estado"] == estado]
-        nombres = sub["pais"].dropna().astype(str).sort_values().tolist()
-        cantidad = len(nombres)
+    for subregion in orden_sub:
+        x_vals = []
+        hover_vals = []
+        for estado in orden:
+            sub = tmp[(tmp["Estado"] == estado) & (tmp["subregion"] == subregion)]
+            nombres = sub["pais"].dropna().astype(str).sort_values().tolist()
+            x_vals.append(len(nombres))
+            hover_vals.append("<br>".join(nombres) if nombres else "Ninguno")
+
         fig.add_trace(
             go.Bar(
-                x=[cantidad],
-                y=[estado],
+                x=x_vals,
+                y=orden,
                 orientation="h",
-                marker_color=colores[estado],
-                text=[cantidad],
-                textposition="outside" if cantidad == 0 else "inside",
-                textfont=dict(color="white" if cantidad > 0 else TEXTO, size=12),
-                customdata=["<br>".join(nombres) if nombres else "Ninguno"],
+                name=subregion,
+                marker_color=SUBREGION_COLORES[subregion],
+                text=[str(v) if v > 0 else "" for v in x_vals],
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont=dict(color="white", size=11),
+                customdata=hover_vals,
                 hovertemplate=(
-                    f"<b>{estado}</b><br>%{{x}} países<br>"
-                    "%{customdata}<extra></extra>"
+                    f"<b>{html.escape(subregion)}</b><br>"
+                    "%{y}: %{x} países<br>%{customdata}<extra></extra>"
                 ),
                 showlegend=False,
             )
@@ -1204,7 +1261,7 @@ def grafico_estado_binario(datos, tipo, altura=300):
         margin=dict(l=0, r=20, t=8, b=42),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        barmode="group",
+        barmode="stack",
         xaxis_title="Países",
         yaxis_title=None,
         bargap=.42,
@@ -1227,56 +1284,77 @@ def grafico_estado_binario(datos, tipo, altura=300):
 
 
 def grafico_atribucion_elnino(datos, altura=300):
-    """Distribución de la atribución a El Niño; el hover lista los países."""
+    """Atribución a El Niño dividida por subregión; el hover lista los países."""
     if datos.empty:
         return go.Figure()
 
-    tmp = datos[["pais", "atribucion_elnino"]].copy()
+    tmp = datos[["pais", "subregion", "atribucion_elnino"]].copy()
+    tmp["subregion"] = tmp["subregion"].fillna("Sin subregión")
     tmp["Atribución"] = tmp["atribucion_elnino"].apply(clasificar_atribucion)
 
-    registros = []
-    for categoria in ATRIBUCION_ORDEN:
-        sub = tmp[tmp["Atribución"] == categoria]
-        if sub.empty:
-            continue
-        nombres = sub["pais"].dropna().astype(str).sort_values().tolist()
-        registros.append({
-            "Atribución": categoria,
-            "Países": len(nombres),
-            "Países_lista": "<br>".join(nombres),
-        })
+    categorias = [
+        x for x in ATRIBUCION_ORDEN
+        if x in set(tmp["Atribución"])
+    ]
+    presentes = set(tmp["subregion"].astype(str))
+    orden_sub = [x for x in SUBREGION_ORDEN + ["Sin subregión"] if x in presentes]
 
-    t = pd.DataFrame(registros)
-    if t.empty:
-        return go.Figure()
+    fig = go.Figure()
+    for subregion in orden_sub:
+        x_vals = []
+        hover_vals = []
+        for categoria in categorias:
+            sub = tmp[
+                (tmp["Atribución"] == categoria)
+                & (tmp["subregion"] == subregion)
+            ]
+            nombres = sub["pais"].dropna().astype(str).sort_values().tolist()
+            x_vals.append(len(nombres))
+            hover_vals.append("<br>".join(nombres) if nombres else "Ninguno")
 
-    fig = go.Figure(
-        go.Bar(
-            x=t["Países"],
-            y=t["Atribución"],
-            orientation="h",
-            marker_color=[ATRIBUCION_COLORES[x] for x in t["Atribución"]],
-            text=t["Países"],
-            textposition="inside",
-            textfont=dict(color="white", size=12),
-            customdata=t["Países_lista"],
-            hovertemplate="<b>%{y}</b><br>%{x} países<br>%{customdata}<extra></extra>",
-            showlegend=False,
+        fig.add_trace(
+            go.Bar(
+                x=x_vals,
+                y=categorias,
+                orientation="h",
+                name=subregion,
+                marker_color=SUBREGION_COLORES[subregion],
+                text=[str(v) if v > 0 else "" for v in x_vals],
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont=dict(color="white", size=11),
+                customdata=hover_vals,
+                hovertemplate=(
+                    f"<b>{html.escape(subregion)}</b><br>"
+                    "%{y}: %{x} países<br>%{customdata}<extra></extra>"
+                ),
+                showlegend=False,
+            )
         )
+
+    max_categoria = (
+        tmp.groupby("Atribución", dropna=False).size().max()
+        if not tmp.empty else 1
     )
     fig.update_layout(
         height=altura,
         margin=dict(l=0, r=20, t=8, b=42),
         paper_bgcolor="white",
         plot_bgcolor="white",
+        barmode="stack",
         xaxis_title="Países",
         yaxis_title=None,
         bargap=.34,
     )
-    fig.update_xaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero", zeroline=False)
+    fig.update_xaxes(
+        gridcolor="#EAF0F4",
+        dtick=1,
+        range=[0, max(1, max_categoria) + 1],
+        zeroline=False,
+    )
     fig.update_yaxes(
         categoryorder="array",
-        categoryarray=[x for x in ATRIBUCION_ORDEN[::-1] if x in set(t["Atribución"])],
+        categoryarray=categorias[::-1],
         showgrid=False,
         tickfont=dict(size=10),
     )
@@ -1572,7 +1650,11 @@ with g2:
 # Respuesta, impacto y atribución
 section_header(
     "Respuesta, impacto y atribución",
-    "Países según declaratoria, impacto sanitario documentado y relación con El Niño",
+    "Países según declaratoria, impacto sanitario documentado y relación con El Niño, desagregados por subregión",
+)
+st.markdown(
+    leyenda_subregiones_html(filtrado),
+    unsafe_allow_html=True,
 )
 r1, r2, r3 = st.columns([1.0, 1.0, 1.35], gap="medium")
 with r1:
