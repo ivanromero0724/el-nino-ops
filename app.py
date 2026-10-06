@@ -77,8 +77,13 @@ def _hex_rgba(valor, alpha=255):
     return [int(h[i:i + 2], 16) for i in (0, 2, 4)] + [alpha]
 
 
+@st.cache_data(show_spinner=False)
 def _icono_data_uri(clave, size=64):
-    """Rasteriza el pictograma SitRep completo, circular y sin recorte."""
+    """Rasteriza el pictograma SitRep completo, circular y sin recorte.
+
+    El resultado queda cacheado entre reruns para que cambiar un filtro no
+    vuelva a abrir decenas de figuras Matplotlib.
+    """
     draw_size = 64
     cache_key = (clave, draw_size)
     cache = getattr(_icono_data_uri, "_cache", {})
@@ -709,6 +714,23 @@ def _mostrar_seleccion_mapa(evento):
         )
 
 
+def _render_mapa_interactivo(frame_globals):
+    """Render directo del mapa Folium para evitar construir antes el mapa Matplotlib."""
+    mapa_folium = _construir_folium(frame_globals)
+    return st_folium(
+        mapa_folium,
+        use_container_width=True,
+        height=660,
+        returned_objects=[],
+        key="mapa-regional-elnino-folium",
+    )
+
+
+# Exponer el renderer al dashboard legacy. Así los cambios de filtros no
+# construyen una figura GeoPandas/Matplotlib que luego era descartada.
+st._ops_render_interactive_map = _render_mapa_interactivo
+
+
 # Streamlit conserva el módulo entre reruns: guardar la función original una sola vez.
 if not hasattr(st, "_ops_original_pyplot"):
     st._ops_original_pyplot = st.pyplot
@@ -722,14 +744,7 @@ def _pyplot_interactivo(fig=None, *args, **kwargs):
         k in g for k in ("geo", "actual", "filtrado")
     ):
         try:
-            mapa_folium = _construir_folium(g)
-            return st_folium(
-                mapa_folium,
-                use_container_width=True,
-                height=660,
-                returned_objects=[],
-                key="mapa-regional-elnino-folium",
-            )
+            return _render_mapa_interactivo(g)
         except Exception as exc:
             st.warning(f"No fue posible cargar el mapa interactivo: {exc}")
     return _ORIGINAL_PYPLOT(fig, *args, **kwargs)
