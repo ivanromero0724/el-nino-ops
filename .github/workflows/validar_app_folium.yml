@@ -279,6 +279,48 @@ jobs:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Canadá sigue limitado: {limites_navegacion}")
 
+              # Caso reportado por el usuario: filtrar por América Central.
+              multis = page.locator('[data-testid="stMultiSelect"]')
+              if multis.count() < 3:
+                  raise AssertionError("No se encontraron los filtros multiselect esperados")
+              subregion = multis.nth(0)
+              entrada_sub = subregion.locator("input")
+              entrada_sub.click()
+              entrada_sub.fill("América Central")
+              page.wait_for_timeout(250)
+              entrada_sub.press("Enter")
+              page.wait_for_timeout(1800)
+
+              titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
+              titulo.wait_for(state="visible", timeout=15000)
+              if page.locator('[data-testid="stAppViewContainer"]').count() == 0:
+                  page.screenshot(path="filtro_subregion_fallo.png", full_page=True)
+                  raise AssertionError("La app quedó en blanco al filtrar América Central")
+
+              # Verificar que el mapa vuelva a existir tras el filtro de subregión.
+              folium_sub_ok = False
+              for _ in range(40):
+                  for frame in page.frames:
+                      if frame == page.main_frame:
+                          continue
+                      if frame.locator("path.leaflet-interactive").count() > 0:
+                          folium_sub_ok = True
+                          break
+                  if folium_sub_ok:
+                      break
+                  page.wait_for_timeout(500)
+              if not folium_sub_ok:
+                  page.screenshot(path="filtro_subregion_fallo.png", full_page=True)
+                  raise AssertionError("El mapa no volvió a montarse al filtrar América Central")
+
+              # Limpiar el filtro antes del estrés de prioridad.
+              chips = subregion.locator('[data-testid="stMultiSelectDeleteIcon"]')
+              if chips.count() > 0:
+                  chips.first.click()
+                  page.wait_for_timeout(1200)
+
+              print("OK filtro América Central")
+
               # Estrés de reruns: aplicar varios filtros seguidos y comprobar
               # que la app no quede en blanco durante las reconstrucciones.
               for valor in ["Alta", "Media", "Baja"]:
@@ -433,4 +475,5 @@ jobs:
             mapa_live_centrado_fallo.png
             mapa_live_solapes_fallo.png
             filtros_rerun_fallo.png
+            filtro_subregion_fallo.png
           if-no-files-found: ignore
