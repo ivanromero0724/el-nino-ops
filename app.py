@@ -230,14 +230,14 @@ def _construir_folium(frame_globals):
     # Sin teselas externas: océano uniforme y navegación por las Américas,
     # permitiendo subir hasta Canadá sin perder el encuadre inicial México-Sudamérica.
     m = folium.Map(
-        location=[-12.0, -76.0],
-        zoom_start=3,
+        location=[-11.5, -76.0],
+        zoom_start=2.1,
         tiles=None,
         min_zoom=2,
         max_zoom=7,
         min_lat=-62,
         max_lat=85,
-        min_lon=-135,
+        min_lon=-170,
         max_lon=45,
         max_bounds=True,
         world_copy_jump=False,
@@ -408,42 +408,10 @@ def _construir_folium(frame_globals):
             interactive=False,
         ).add_to(m)
 
-    # Encuadre inicial centrado visualmente en el continente americano.
-    # El mapa es mucho más ancho que alto; si usamos límites simétricos,
-    # sobra demasiado Pacífico y aparece Hawái. Desplazamos el centro hacia
-    # el Atlántico manteniendo visibles México y toda Sudamérica.
-    m.fit_bounds(
-        [[-57.5, -119.0], [33.0, 22.0]],
-        padding_top_left=[10, 10],
-        padding_bottom_right=[10, 10],
-    )
-
-    # Centrado determinístico de la vista inicial. Mantiene el zoom calculado
-    # por fitBounds, pero coloca el eje visual del continente en el centro del
-    # panel para que no quede pegado a la izquierda.
-    nombre_mapa = m.get_name()
-    m.get_root().script.add_child(
-        folium.Element(
-            f"""
-            (function() {{
-                var intentos = 0;
-                function centrarContinente() {{
-                    var mapa = window["{nombre_mapa}"];
-                    if (!mapa) {{
-                        if (intentos++ < 100) {{
-                            setTimeout(centrarContinente, 50);
-                        }}
-                        return;
-                    }}
-                    setTimeout(function() {{
-                        mapa.setView([-11.5, -76.0], mapa.getZoom(), {{animate: false}});
-                    }}, 120);
-                }}
-                centrarContinente();
-            }})();
-            """
-        )
-    )
+    # Vista inicial determinística: centro continental y zoom suficiente para
+    # mostrar México, Centroamérica y toda Sudamérica sin pegar el continente
+    # a ninguno de los bordes. Hawái no se dibuja porque la geometría fue
+    # recortada previamente a -135°.
     return m
 
 
