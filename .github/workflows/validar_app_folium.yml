@@ -41,7 +41,7 @@ jobs:
               "zoom_start=3.0",
               "clip_americas = box(-135.0",
               "st.iframe(",
-              "height=660",
+              "height=674",
           ]
           faltan = [x for x in requeridos if x not in txt]
           if faltan:
