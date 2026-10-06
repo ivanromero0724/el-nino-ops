@@ -211,6 +211,44 @@ st.markdown(
         }}
 
         .map-card-marker {{display:none;}}
+        /* Alineación estructural mapa/leyendas: ambas columnas comparten la
+           misma altura; el iframe crece hasta el borde inferior de la leyenda. */
+        div[data-testid="stHorizontalBlock"]:has(.map-card-marker) {{
+            align-items:stretch !important;
+        }}
+        div[data-testid="stHorizontalBlock"]:has(.map-card-marker) > div[data-testid="stColumn"] {{
+            display:flex !important;
+            align-items:stretch !important;
+        }}
+        div[data-testid="stHorizontalBlock"]:has(.map-card-marker) > div[data-testid="stColumn"] > div[data-testid="stVerticalBlock"] {{
+            flex:1 1 auto !important;
+            height:100% !important;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.map-card-marker) {{
+            height:100% !important;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.map-card-marker) > div[data-testid="stVerticalBlock"] {{
+            height:100% !important;
+            display:flex !important;
+            flex-direction:column !important;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.map-card-marker) div[data-testid="stIFrame"] {{
+            flex:1 1 auto !important;
+            min-height:0 !important;
+            height:auto !important;
+        }}
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.map-card-marker) div[data-testid="stIFrame"] iframe {{
+            height:100% !important;
+            display:block !important;
+        }}
+        .map-side-panel {{
+            height:100%;
+            display:flex;
+            flex-direction:column;
+        }}
+        .map-side-panel .priority-card {{
+            margin-top:auto;
+        }}
         .map-note {{
             color:#6D8191;
             font-size:.76rem;
@@ -1624,13 +1662,6 @@ with col_resumen:
             f'<div class="legend-count">{n}</div>'
             f'</div>'
         )
-    st.markdown(
-        '<div class="legend-card amenazas-card">'
-        '<div class="legend-title">Principales amenazas</div>'
-        '<div class="legend-body">' + ''.join(filas_amenazas) + '</div>'
-        '</div>',
-        unsafe_allow_html=True,
-    )
 
     filas_prioridad = []
     for p in ORDEN_PRIORIDAD:
@@ -1642,10 +1673,17 @@ with col_resumen:
             f'<div class="legend-count" style="color:{txt_color}">{n}</div>'
             f'</div>'
         )
+
     st.markdown(
+        '<div class="map-side-panel">'
+        '<div class="legend-card amenazas-card">'
+        '<div class="legend-title">Principales amenazas</div>'
+        '<div class="legend-body">' + ''.join(filas_amenazas) + '</div>'
+        '</div>'
         '<div class="legend-card priority-card">'
         '<div class="legend-title">Nivel de prioridad</div>'
         '<div class="legend-body">' + ''.join(filas_prioridad) + '</div>'
+        '</div>'
         '</div>',
         unsafe_allow_html=True,
     )
