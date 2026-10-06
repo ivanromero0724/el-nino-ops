@@ -231,14 +231,14 @@ def _construir_folium(frame_globals):
     # permitiendo subir hasta Canadá sin perder el encuadre inicial México-Sudamérica.
     m = folium.Map(
         location=[-11.5, -76.0],
-        zoom_start=2.1,
+        zoom_start=3.0,
         tiles=None,
         min_zoom=2,
         max_zoom=7,
-        min_lat=-62,
+        min_lat=-85,
         max_lat=85,
-        min_lon=-170,
-        max_lon=45,
+        min_lon=-190,
+        max_lon=60,
         max_bounds=True,
         world_copy_jump=False,
         zoom_control=True,
