@@ -210,6 +210,7 @@ st.markdown(
             border-radius:9px;
         }}
 
+        .map-card-marker {{display:none;}}
         .map-note {{
             color:#6D8191;
             font-size:.76rem;
@@ -1585,6 +1586,7 @@ amenazas_mapa = filtro_amenaza if filtro_amenaza else list(AMENAZAS.keys())
 col_mapa, col_resumen = st.columns([4.15, 1.35], gap="medium")
 with col_mapa:
     with st.container(border=True):
+        st.markdown('<span class="map-card-marker"></span>', unsafe_allow_html=True)
         if modo_mapa == "Prioridad + amenazas":
             renderer = getattr(st, "_ops_render_interactive_map", None)
             if renderer is not None:
