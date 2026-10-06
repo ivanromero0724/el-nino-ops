@@ -1040,15 +1040,6 @@ section_header("Panorama regional", "Distribución de prioridades y amenazas rep
 modo_mapa = "Prioridad + amenazas"
 amenazas_mapa = filtro_amenaza if filtro_amenaza else list(AMENAZAS.keys())
 
-with st.container(border=True):
-    st.markdown(
-        '<div class="map-note">El color del país representa el nivel de prioridad. '
-        'Los pictogramas siguen el filtro general de <b>Amenaza / impacto</b>; '
-        'si no seleccionas ninguno, se muestran todos. Puedes hacer zoom y pasar '
-        'el cursor sobre países e iconos para ver el detalle.</div>',
-        unsafe_allow_html=True,
-    )
-
 col_mapa, col_resumen = st.columns([4.15, 1.35], gap="medium")
 with col_mapa:
     with st.container(border=True):
