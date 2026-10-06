@@ -289,10 +289,10 @@ jobs:
                   prioridad = multis.nth(1)
                   entrada = prioridad.locator("input")
                   entrada.click()
-                  opcion = page.locator('[role="option"]', has_text=valor).last
-                  opcion.wait_for(state="visible", timeout=10000)
-                  opcion.click()
-                  page.wait_for_timeout(900)
+                  entrada.fill(valor)
+                  page.wait_for_timeout(250)
+                  entrada.press("Enter")
+                  page.wait_for_timeout(1200)
 
                   titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
                   titulo.wait_for(state="visible", timeout=15000)
