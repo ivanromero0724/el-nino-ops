@@ -575,11 +575,13 @@ SUBREGION_ORDEN = [
 ]
 
 SUBREGION_COLORES = {
+    # Paleta OPS usada en los productos del SitRep: azul institucional,
+    # azules secundarios y colores de apoyo ya presentes en la simbología.
     "América del Norte": "#004B87",
-    "América Central": "#0072CE",
-    "Caribe": "#00A6A6",
-    "Subregión Andina": "#7A5AA6",
-    "Brasil y Cono Sur": "#5C9E45",
+    "América Central": "#168BC9",
+    "Caribe": "#008877",
+    "Subregión Andina": "#7851A9",
+    "Brasil y Cono Sur": "#F36C21",
     "Sin subregión": "#AAB7C2",
 }
 
