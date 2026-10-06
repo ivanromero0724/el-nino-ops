@@ -968,18 +968,32 @@ with st.container(border=True):
     st.markdown('<div class="filter-label">Filtros de consulta</div>', unsafe_allow_html=True)
     f1, f2, f3, f4 = st.columns([1.15, 1.35, 1.15, 1.85], gap="medium")
     with f1:
-        sitrep_id = st.selectbox("SitRep / fecha", ids, format_func=lambda x: labels_sitrep.get(x, x))
+        sitrep_id = st.selectbox(
+            "SitRep / fecha",
+            ids,
+            format_func=lambda x: labels_sitrep.get(x, x),
+            key="filtro_sitrep",
+        )
 
     actual = base[base["sitrep_id"] == sitrep_id].copy()
 
     with f2:
         opciones_sub = sorted(actual["subregion"].dropna().astype(str).unique())
-        filtro_sub = st.multiselect("Subregión", opciones_sub, placeholder="Todas")
+        filtro_sub = st.multiselect(
+            "Subregión", opciones_sub, placeholder="Todas", key="filtro_subregion"
+        )
     with f3:
         opciones_pri = [p for p in ORDEN_PRIORIDAD if p in set(actual["prioridad"].dropna())]
-        filtro_pri = st.multiselect("Prioridad", opciones_pri, placeholder="Todas")
+        filtro_pri = st.multiselect(
+            "Prioridad", opciones_pri, placeholder="Todas", key="filtro_prioridad"
+        )
     with f4:
-        filtro_amenaza = st.multiselect("Amenaza / impacto", list(AMENAZAS.keys()), placeholder="Todas")
+        filtro_amenaza = st.multiselect(
+            "Amenaza / impacto",
+            list(AMENAZAS.keys()),
+            placeholder="Todas",
+            key="filtro_amenaza",
+        )
     st.markdown('<div class="filter-note">Los filtros actualizan todos los indicadores y visualizaciones del corte seleccionado.</div>', unsafe_allow_html=True)
 
 filtrado = actual.copy()
@@ -1137,7 +1151,16 @@ else:
         selector_col, _ = st.columns([1.25, 2.75])
         with selector_col:
             paises = filtrado.sort_values(["prioridad", "pais"])["pais"].tolist()
-            pais_sel = st.selectbox("País / territorio", paises)
+            # El filtro puede cambiar completamente la lista de países. Mantener
+            # explícitamente un valor válido evita que el widget downstream quede
+            # con un estado obsoleto durante el rerun de Streamlit.
+            if st.session_state.get("pais_detalle") not in paises:
+                st.session_state["pais_detalle"] = paises[0]
+            pais_sel = st.selectbox(
+                "País / territorio",
+                paises,
+                key="pais_detalle",
+            )
 
         fila = filtrado[filtrado["pais"] == pais_sel].iloc[0]
         prioridad = texto(fila.get("prioridad"), "Sin priorización")
