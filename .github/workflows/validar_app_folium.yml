@@ -279,9 +279,47 @@ jobs:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError(f"Canadá sigue limitado: {limites_navegacion}")
 
+              # Estrés de reruns: aplicar varios filtros seguidos y comprobar
+              # que la app no quede en blanco durante las reconstrucciones.
+              for valor in ["Alta", "Media", "Baja"]:
+                  multis = page.locator('[data-testid="stMultiSelect"]')
+                  if multis.count() < 3:
+                      page.screenshot(path="filtros_rerun_fallo.png", full_page=True)
+                      raise AssertionError("No se encontraron los filtros multiselect esperados")
+                  prioridad = multis.nth(1)
+                  entrada = prioridad.locator("input")
+                  entrada.click()
+                  opcion = page.locator('[role="option"]', has_text=valor).last
+                  opcion.wait_for(state="visible", timeout=10000)
+                  opcion.click()
+                  page.wait_for_timeout(900)
+
+                  titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
+                  titulo.wait_for(state="visible", timeout=15000)
+                  if page.locator('[data-testid="stAppViewContainer"]').count() == 0:
+                      page.screenshot(path="filtros_rerun_fallo.png", full_page=True)
+                      raise AssertionError(f"La app quedó en blanco al aplicar prioridad {valor}")
+
+              # Después de varios reruns, el mapa debe volver a montarse.
+              folium_ok = False
+              for _ in range(30):
+                  for frame in page.frames:
+                      if frame == page.main_frame:
+                          continue
+                      if frame.locator("path.leaflet-interactive").count() > 0:
+                          folium_ok = True
+                          break
+                  if folium_ok:
+                      break
+                  page.wait_for_timeout(500)
+              if not folium_ok:
+                  page.screenshot(path="filtros_rerun_fallo.png", full_page=True)
+                  raise AssertionError("El mapa no volvió a montarse después de varios filtros")
+
               print("OK tooltip navegador:", texto[:300])
               print("OK bounds:", bounds)
               print("OK navegación Canadá:", limites_navegacion)
+              print("OK reruns por filtros")
               page.screenshot(path="mapa_hover_ok.png", full_page=True)
               browser.close()
           PY
@@ -394,4 +432,5 @@ jobs:
             mapa_live_click_fallo.png
             mapa_live_centrado_fallo.png
             mapa_live_solapes_fallo.png
+            filtros_rerun_fallo.png
           if-no-files-found: ignore
