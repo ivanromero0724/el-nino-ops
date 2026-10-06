@@ -1257,10 +1257,23 @@ def grafico_estado_binario(datos, tipo, altura=300):
             )
         )
 
-    max_n = max(1, len(datos))
+    totales_estado = tmp.groupby("Estado", dropna=False).size().reindex(orden, fill_value=0)
+    max_n = max(1, int(totales_estado.max()))
+
+    for estado, total in totales_estado.items():
+        fig.add_annotation(
+            x=float(total) + max(.28, max_n * .025),
+            y=estado,
+            text=f"<b>{int(total)}</b>",
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(size=12, color=AZUL_OPS),
+        )
+
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=20, t=8, b=42),
+        margin=dict(l=0, r=28, t=8, b=42),
         paper_bgcolor="white",
         plot_bgcolor="white",
         barmode="stack",
@@ -1272,7 +1285,7 @@ def grafico_estado_binario(datos, tipo, altura=300):
     fig.update_xaxes(
         gridcolor="#EAF0F4",
         dtick=paso,
-        range=[0, max_n + max(1, max_n * .12)],
+        range=[0, max_n + max(1.35, max_n * .16)],
         zeroline=False,
         tickangle=0,
     )
@@ -1334,13 +1347,23 @@ def grafico_atribucion_elnino(datos, altura=300):
             )
         )
 
-    max_categoria = (
-        tmp.groupby("Atribución", dropna=False).size().max()
-        if not tmp.empty else 1
-    )
+    totales_atribucion = tmp.groupby("Atribución", dropna=False).size().reindex(categorias, fill_value=0)
+    max_categoria = max(1, int(totales_atribucion.max()))
+
+    for categoria, total in totales_atribucion.items():
+        fig.add_annotation(
+            x=float(total) + max(.22, max_categoria * .02),
+            y=categoria,
+            text=f"<b>{int(total)}</b>",
+            showarrow=False,
+            xanchor="left",
+            yanchor="middle",
+            font=dict(size=12, color=AZUL_OPS),
+        )
+
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=20, t=8, b=42),
+        margin=dict(l=0, r=28, t=8, b=42),
         paper_bgcolor="white",
         plot_bgcolor="white",
         barmode="stack",
@@ -1351,7 +1374,7 @@ def grafico_atribucion_elnino(datos, altura=300):
     fig.update_xaxes(
         gridcolor="#EAF0F4",
         dtick=1,
-        range=[0, max(1, max_categoria) + 1],
+        range=[0, max_categoria + max(1.15, max_categoria * .14)],
         zeroline=False,
     )
     fig.update_yaxes(
