@@ -257,6 +257,7 @@ st.markdown(
             border:1px solid {BORDE}; background:#FFFFFF; border-radius:14px;
             margin-bottom:.75rem; overflow:hidden;
         }}
+        .legend-card.priority-card {{margin-bottom:0;}}
         .legend-title {{
             min-height:52px; display:flex; align-items:center;
             padding:0 1rem; color:{AZUL_OPS}; font-size:.94rem; font-weight:800;
@@ -1362,7 +1363,7 @@ with col_resumen:
             f'</div>'
         )
     st.markdown(
-        '<div class="legend-card">'
+        '<div class="legend-card priority-card">'
         '<div class="legend-title">Nivel de prioridad</div>'
         '<div class="legend-body">' + ''.join(filas_prioridad) + '</div>'
         '</div>',
@@ -1407,10 +1408,6 @@ with r1:
             use_container_width=True,
             config=CHART_CONFIG,
         )
-        st.markdown(
-            lista_paises_estado_html(filtrado, "declaratoria"),
-            unsafe_allow_html=True,
-        )
 with r2:
     with st.container(border=True):
         st.markdown("**Impacto en salud documentado**")
@@ -1418,10 +1415,6 @@ with r2:
             grafico_estado_binario(filtrado, "impacto"),
             use_container_width=True,
             config=CHART_CONFIG,
-        )
-        st.markdown(
-            lista_paises_estado_html(filtrado, "impacto"),
-            unsafe_allow_html=True,
         )
 with r3:
     with st.container(border=True):
@@ -1431,6 +1424,26 @@ with r3:
             use_container_width=True,
             config=CHART_CONFIG,
         )
+
+# Detalle visible de países en un único bloque para mantener las tres
+# tarjetas de gráficos perfectamente alineadas.
+with st.container(border=True):
+    st.markdown("**Países / territorios por categoría**")
+    d1, d2, d3 = st.columns([1.0, 1.0, 1.35], gap="large")
+    with d1:
+        st.markdown('<div class="summary-label">Declaratoria</div>', unsafe_allow_html=True)
+        st.markdown(
+            lista_paises_estado_html(filtrado, "declaratoria"),
+            unsafe_allow_html=True,
+        )
+    with d2:
+        st.markdown('<div class="summary-label">Impacto en salud documentado</div>', unsafe_allow_html=True)
+        st.markdown(
+            lista_paises_estado_html(filtrado, "impacto"),
+            unsafe_allow_html=True,
+        )
+    with d3:
+        st.markdown('<div class="summary-label">Atribución a El Niño</div>', unsafe_allow_html=True)
         st.markdown(
             lista_paises_atribucion_html(filtrado),
             unsafe_allow_html=True,
