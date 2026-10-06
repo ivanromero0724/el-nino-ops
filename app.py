@@ -700,7 +700,7 @@ def _pyplot_interactivo(fig=None, *args, **kwargs):
             return st_folium(
                 mapa_folium,
                 use_container_width=True,
-                height=690,
+                height=660,
                 returned_objects=[],
                 key="mapa-regional-elnino-folium",
             )
