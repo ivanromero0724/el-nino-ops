@@ -47,6 +47,24 @@ AMENAZAS = {
     "Afectación de servicios de salud": ("icono_servicios", "servicios"),
 }
 
+# Ajustes exclusivos del dashboard interactivo para dar más aire a los callouts.
+# No modifican las posiciones del mapa estático de SitRep.
+CALLOUT_ROUTES_DASHBOARD = {
+    "MEX": [(-106.0, 28.8), (-104.0, 27.4), (-102.0, 23.5)],
+    "GTM": [(-112.0, 28.8), (-103.0, 27.2), (-96.0, 21.4), (-90.4, 15.7)],
+    "HND": [(-112.0, 20.2), (-102.0, 19.3), (-94.0, 16.6), (-86.7, 14.8)],
+    "SLV": [(-112.0, 11.7), (-102.0, 11.9), (-95.0, 12.8), (-88.9, 13.7)],
+    "CRI": [(-112.0, 3.0), (-102.0, 3.8), (-94.0, 5.7), (-88.0, 7.8), (-84.2, 9.8)],
+    "COL": [(-94.0, -1.2), (-84.0, -1.2), (-78.0, 1.2), (-74.5, 4.2)],
+    "ECU": [(-94.0, -10.0), (-84.0, -10.0), (-78.0, -6.2), (-78.4, -1.5)],
+    "PER": [(-94.0, -19.0), (-84.0, -19.0), (-79.0, -12.5), (-75.5, -9.5)],
+    "BOL": [(-83.5, -28.8), (-73.0, -28.8), (-68.0, -21.5), (-64.8, -16.8)],
+    "CHL": [(-103.0, -39.5), (-86.0, -39.5), (-76.0, -35.5), (-71.2, -33.5)],
+    "JAM": [(-82.5, 30.2), (-80.5, 25.0), (-77.3, 18.2)],
+    "PRI": [(-68.0, 30.2), (-66.8, 24.0), (-66.4, 18.2)],
+    "TTO": [(-58.0, 20.5), (-59.2, 16.0), (-61.2, 10.5)],
+}
+
 
 def _hex_rgba(valor, alpha=255):
     h = valor.lstrip("#")
@@ -316,7 +334,7 @@ def _construir_folium(frame_globals):
             continue
 
         _, _, nombre_pais = mapa_ref.LABELS[iso]
-        ruta_lonlat = list(mapa_ref.ROUTES[iso])
+        ruta_lonlat = list(CALLOUT_ROUTES_DASHBOARD.get(iso, mapa_ref.ROUTES[iso]))
         ruta = [(lat, lon) for lon, lat in ruta_lonlat]
         target_lon, target_lat = mapa_ref.TARGET[iso]
         activas = _amenazas_activas(fila, seleccion)
