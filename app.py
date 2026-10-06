@@ -23,6 +23,7 @@ import streamlit as st
 import folium
 from folium.features import DivIcon
 from streamlit_folium import st_folium
+from shapely.geometry import box
 
 from scripts import mapa_sitrep as mapa_ref
 
@@ -175,6 +176,12 @@ def _construir_folium(frame_globals):
 
     mapa = geo[["COUNTRY", "ISO_CC", "geometry"]].copy()
     mapa = mapa.merge(info, left_on="ISO_CC", right_on="iso3", how="left")
+
+    # Recortar la geografía a la ventana continental de interés.
+    # Esto elimina Hawái y otros fragmentos muy occidentales del multipolígono
+    # de Estados Unidos sin afectar México, Canadá continental ni Sudamérica.
+    clip_americas = box(-135.0, -62.0, -25.0, 85.0)
+    mapa["geometry"] = mapa.geometry.intersection(clip_americas)
     seleccionados = set(filtrado["iso3"].dropna().astype(str))
 
     mapa["prioridad_mapa"] = mapa["prioridad"].fillna("Sin priorización")
@@ -385,6 +392,22 @@ def _construir_folium(frame_globals):
         [[-57.5, -119.0], [33.0, 22.0]],
         padding_top_left=[10, 10],
         padding_bottom_right=[10, 10],
+    )
+
+    # El ajuste vertical de fitBounds deja demasiado Pacífico en pantallas anchas.
+    # Desplazar la cámara hacia el este mueve visualmente el continente a la
+    # izquierda del panel, sin cambiar el zoom ni sacrificar Sudamérica.
+    nombre_mapa = m.get_name()
+    m.get_root().script.add_child(
+        folium.Element(
+            f"""
+            {nombre_mapa}.whenReady(function() {{
+                setTimeout(function() {{
+                    {nombre_mapa}.panBy([220, 0], {{animate: false}});
+                }}, 80);
+            }});
+            """
+        )
     )
     return m
 
