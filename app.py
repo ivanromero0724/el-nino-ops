@@ -382,7 +382,7 @@ def _construir_folium(frame_globals):
     # sobra demasiado Pacífico y aparece Hawái. Desplazamos el centro hacia
     # el Atlántico manteniendo visibles México y toda Sudamérica.
     m.fit_bounds(
-        [[-57.5, -119.0], [33.0, -12.0]],
+        [[-57.5, -119.0], [33.0, -2.0]],
         padding_top_left=[10, 10],
         padding_bottom_right=[10, 10],
     )
