@@ -105,7 +105,7 @@ jobs:
               "campo prioridad": "prioridad_popup" in rendered,
               "campo amenazas": "amenazas_popup" in rendered,
               "situación fuera del popup": "situacion_popup" not in rendered,
-              "fit bounds": "fitBounds" in rendered,
+              "vista centrada": "zoom_start=2.1" in __import__("pathlib").Path("app.py").read_text(encoding="utf-8"),
               "callout": "#075594" in rendered,
           }
           fallos = [k for k, ok in checks.items() if not ok]
