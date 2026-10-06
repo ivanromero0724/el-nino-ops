@@ -292,9 +292,20 @@ jobs:
               page.wait_for_timeout(1800)
 
               titulo = page.get_by_text("El Niño y salud pública en las Américas", exact=True)
-              titulo.wait_for(state="visible", timeout=15000)
+              try:
+                  titulo.wait_for(state="visible", timeout=15000)
+              except Exception:
+                  page.screenshot(path="filtro_subregion_fallo.png", full_page=True)
+                  try:
+                      print("\n===== STREAMLIT LOG =====\n")
+                      print(open("/tmp/streamlit.log", encoding="utf-8", errors="replace").read()[-12000:])
+                      print("\n===== FIN STREAMLIT LOG =====\n")
+                  except Exception as log_exc:
+                      print("No se pudo leer streamlit.log:", log_exc)
+                  raise
               if page.locator('[data-testid="stAppViewContainer"]').count() == 0:
                   page.screenshot(path="filtro_subregion_fallo.png", full_page=True)
+                  print(open("/tmp/streamlit.log", encoding="utf-8", errors="replace").read()[-12000:])
                   raise AssertionError("La app quedó en blanco al filtrar América Central")
 
               # Verificar que el mapa vuelva a existir tras el filtro de subregión.
