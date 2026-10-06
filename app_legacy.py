@@ -407,6 +407,41 @@ def es_impacto(valor):
     return bool(t) and not t.startswith("no")
 
 
+def clasificar_atribucion(valor):
+    """Agrupa la atribución a El Niño en categorías comparables para el tablero."""
+    t = texto(valor, "").strip().lower()
+    if not t or t in {"no aplica", "sin información", "sin informacion"}:
+        return "No aplica / sin información"
+    if "descart" in t or t.startswith("no confirm") or "no confirmada" in t:
+        return "No confirmada / descartada"
+    if "confirmada/relacionada" in t or "confirmada / relacionada" in t or t.startswith("confirmada"):
+        return "Confirmada / relacionada"
+    if "compatible" in t or "contextual" in t:
+        return "Compatible / contextual"
+    if "prospect" in t:
+        return "Prospectiva"
+    return "Otra / por revisar"
+
+
+ATRIBUCION_ORDEN = [
+    "Confirmada / relacionada",
+    "Compatible / contextual",
+    "Prospectiva",
+    "No confirmada / descartada",
+    "No aplica / sin información",
+    "Otra / por revisar",
+]
+
+ATRIBUCION_COLORES = {
+    "Confirmada / relacionada": "#004B87",
+    "Compatible / contextual": "#0072CE",
+    "Prospectiva": "#6FB7E9",
+    "No confirmada / descartada": "#AAB7C2",
+    "No aplica / sin información": "#D8E1E7",
+    "Otra / por revisar": "#7B8C99",
+}
+
+
 def sitrep_etiqueta(fila):
     numero = int(fila["sitrep_numero"]) if pd.notna(fila["sitrep_numero"]) else "—"
     fecha = fila["fecha_corte"].strftime("%d/%m/%Y") if pd.notna(fila["fecha_corte"]) else "sin fecha"
@@ -838,6 +873,133 @@ def matriz_amenazas(datos, altura=560):
     return fig
 
 
+def grafico_estado_binario(datos, tipo, altura=300):
+    """Resumen de países por declaratoria o impacto, con nombres en el hover."""
+    if datos.empty:
+        return go.Figure()
+
+    if tipo == "declaratoria":
+        serie = datos["declaratoria_activa"].apply(es_activo)
+        orden = ["Activa", "No activa"]
+        etiquetas = serie.map({True: "Activa", False: "No activa"})
+        colores = {"Activa": AZUL_OPS, "No activa": "#D8E1E7"}
+    elif tipo == "impacto":
+        serie = datos["impacto_salud_documentado"].apply(es_impacto)
+        orden = ["Documentado", "No documentado"]
+        etiquetas = serie.map({True: "Documentado", False: "No documentado"})
+        colores = {"Documentado": AZUL_SEC, "No documentado": "#D8E1E7"}
+    else:
+        raise ValueError(f"Tipo no reconocido: {tipo}")
+
+    tmp = datos[["pais"]].copy()
+    tmp["Estado"] = etiquetas.values
+
+    fig = go.Figure()
+    for estado in orden:
+        sub = tmp[tmp["Estado"] == estado]
+        nombres = sub["pais"].dropna().astype(str).sort_values().tolist()
+        cantidad = len(nombres)
+        fig.add_trace(
+            go.Bar(
+                x=[cantidad],
+                y=[estado],
+                orientation="h",
+                marker_color=colores[estado],
+                text=[cantidad],
+                textposition="outside" if cantidad == 0 else "inside",
+                textfont=dict(color="white" if cantidad > 0 else TEXTO, size=12),
+                customdata=["<br>".join(nombres) if nombres else "Ninguno"],
+                hovertemplate=(
+                    f"<b>{estado}</b><br>%{{x}} países/territorios<br>"
+                    "%{customdata}<extra></extra>"
+                ),
+                showlegend=False,
+            )
+        )
+
+    max_n = max(1, len(datos))
+    fig.update_layout(
+        height=altura,
+        margin=dict(l=0, r=20, t=8, b=42),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        barmode="group",
+        xaxis_title="Países/territorios",
+        yaxis_title=None,
+        bargap=.42,
+    )
+    fig.update_xaxes(
+        gridcolor="#EAF0F4",
+        dtick=1,
+        range=[0, max_n + max(1, max_n * .12)],
+        zeroline=False,
+    )
+    fig.update_yaxes(
+        categoryorder="array",
+        categoryarray=orden[::-1],
+        showgrid=False,
+        tickfont=dict(size=11),
+    )
+    return fig
+
+
+def grafico_atribucion_elnino(datos, altura=300):
+    """Distribución de la atribución a El Niño; el hover lista los países."""
+    if datos.empty:
+        return go.Figure()
+
+    tmp = datos[["pais", "atribucion_elnino"]].copy()
+    tmp["Atribución"] = tmp["atribucion_elnino"].apply(clasificar_atribucion)
+
+    registros = []
+    for categoria in ATRIBUCION_ORDEN:
+        sub = tmp[tmp["Atribución"] == categoria]
+        if sub.empty:
+            continue
+        nombres = sub["pais"].dropna().astype(str).sort_values().tolist()
+        registros.append({
+            "Atribución": categoria,
+            "Países": len(nombres),
+            "Países_lista": "<br>".join(nombres),
+        })
+
+    t = pd.DataFrame(registros)
+    if t.empty:
+        return go.Figure()
+
+    fig = go.Figure(
+        go.Bar(
+            x=t["Países"],
+            y=t["Atribución"],
+            orientation="h",
+            marker_color=[ATRIBUCION_COLORES[x] for x in t["Atribución"]],
+            text=t["Países"],
+            textposition="inside",
+            textfont=dict(color="white", size=12),
+            customdata=t["Países_lista"],
+            hovertemplate="<b>%{y}</b><br>%{x} países/territorios<br>%{customdata}<extra></extra>",
+            showlegend=False,
+        )
+    )
+    fig.update_layout(
+        height=altura,
+        margin=dict(l=0, r=20, t=8, b=42),
+        paper_bgcolor="white",
+        plot_bgcolor="white",
+        xaxis_title="Países/territorios",
+        yaxis_title=None,
+        bargap=.34,
+    )
+    fig.update_xaxes(gridcolor="#EAF0F4", dtick=1, rangemode="tozero", zeroline=False)
+    fig.update_yaxes(
+        categoryorder="array",
+        categoryarray=[x for x in ATRIBUCION_ORDEN[::-1] if x in set(t["Atribución"])],
+        showgrid=False,
+        tickfont=dict(size=10),
+    )
+    return fig
+
+
 def evolucion_prioridad(base):
     t = (
         base.groupby(["sitrep_numero", "fecha_corte", "prioridad"])
@@ -1019,11 +1181,11 @@ hay_filtros = bool(filtro_sub or filtro_pri or filtro_amenaza)
 # KPIs
 section_header("Panorama del corte", "Indicadores principales para la selección actual")
 k1, k2, k3, k4, k5 = st.columns(5, gap="medium")
-k1.metric("Países / territorios", int(len(filtrado)))
-k2.metric("Prioridad alta", int((filtrado["prioridad"] == "Alta").sum()))
-k3.metric("Prioridad media", int((filtrado["prioridad"] == "Media").sum()))
-k4.metric("Declaratoria activa", int(filtrado["declaratoria_activa"].apply(es_activo).sum()))
-k5.metric("Impacto en salud", int(filtrado["impacto_salud_documentado"].apply(es_impacto).sum()))
+k1.metric("Países", int(len(filtrado)))
+k2.metric("Países en prioridad alta", int((filtrado["prioridad"] == "Alta").sum()))
+k3.metric("Países en prioridad media", int((filtrado["prioridad"] == "Media").sum()))
+k4.metric("Países con declaratoria activa", int(filtrado["declaratoria_activa"].apply(es_activo).sum()))
+k5.metric("Países con impacto en salud documentado", int(filtrado["impacto_salud_documentado"].apply(es_impacto).sum()))
 
 # Mapa y resumen
 section_header("Panorama regional", "Distribución de prioridades y amenazas reportadas")
@@ -1120,6 +1282,37 @@ with g2:
         st.markdown("**País × amenaza / impacto**")
         st.plotly_chart(
             matriz_amenazas(filtrado, altura=altura_situacion),
+            use_container_width=True,
+            config=CHART_CONFIG,
+        )
+
+# Respuesta, impacto y atribución
+section_header(
+    "Respuesta, impacto y atribución",
+    "Países/territorios según declaratoria, impacto sanitario documentado y relación con El Niño",
+)
+r1, r2, r3 = st.columns([1.0, 1.0, 1.35], gap="medium")
+with r1:
+    with st.container(border=True):
+        st.markdown("**Declaratoria**")
+        st.plotly_chart(
+            grafico_estado_binario(filtrado, "declaratoria"),
+            use_container_width=True,
+            config=CHART_CONFIG,
+        )
+with r2:
+    with st.container(border=True):
+        st.markdown("**Impacto en salud documentado**")
+        st.plotly_chart(
+            grafico_estado_binario(filtrado, "impacto"),
+            use_container_width=True,
+            config=CHART_CONFIG,
+        )
+with r3:
+    with st.container(border=True):
+        st.markdown("**Atribución a El Niño**")
+        st.plotly_chart(
+            grafico_atribucion_elnino(filtrado),
             use_container_width=True,
             config=CHART_CONFIG,
         )
