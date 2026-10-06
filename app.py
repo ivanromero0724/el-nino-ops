@@ -401,11 +401,22 @@ def _construir_folium(frame_globals):
     m.get_root().script.add_child(
         folium.Element(
             f"""
-            {nombre_mapa}.whenReady(function() {{
-                setTimeout(function() {{
-                    {nombre_mapa}.panBy([220, 0], {{animate: false}});
-                }}, 80);
-            }});
+            (function() {{
+                var intentos = 0;
+                function desplazarContinente() {{
+                    var mapa = window["{nombre_mapa}"];
+                    if (!mapa) {{
+                        if (intentos++ < 100) {{
+                            setTimeout(desplazarContinente, 50);
+                        }}
+                        return;
+                    }}
+                    setTimeout(function() {{
+                        mapa.panBy([220, 0], {{animate: false}});
+                    }}, 120);
+                }}
+                desplazarContinente();
+            }})();
             """
         )
     )
