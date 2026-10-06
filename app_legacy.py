@@ -289,6 +289,34 @@ st.markdown(
             text-align:right; justify-self:end; line-height:1;
         }}
 
+        .country-breakdown {{
+            border-top:1px solid #EAF0F4;
+            margin-top:.1rem;
+            padding:.35rem .1rem .15rem .1rem;
+        }}
+        .country-breakdown-row {{
+            padding:.42rem 0;
+        }}
+        .country-breakdown-row + .country-breakdown-row {{
+            border-top:1px solid #EEF3F6;
+        }}
+        .country-breakdown-head {{
+            display:flex; align-items:center; justify-content:space-between; gap:.6rem;
+            color:#5C7182; font-size:.74rem; font-weight:800; line-height:1.2;
+        }}
+        .country-breakdown-label {{
+            display:flex; align-items:center; gap:.38rem;
+        }}
+        .country-breakdown-dot {{
+            width:8px; height:8px; border-radius:50%; display:inline-block; flex:0 0 8px;
+        }}
+        .country-breakdown-count {{
+            color:{AZUL_OPS}; font-weight:800;
+        }}
+        .country-breakdown-names {{
+            color:{TEXTO}; font-size:.79rem; line-height:1.38; margin-top:.2rem;
+        }}
+
         .country-summary {{
             display:grid; grid-template-columns:minmax(180px,.8fr) 1.35fr 1fr;
             gap:1rem; align-items:start; background:#F8FBFD;
@@ -873,6 +901,83 @@ def matriz_amenazas(datos, altura=560):
     return fig
 
 
+def lista_paises_estado_html(datos, tipo):
+    """Lista visible de países para acompañar los gráficos binarios."""
+    if datos.empty:
+        return '<div class="country-breakdown"></div>'
+
+    if tipo == "declaratoria":
+        serie = datos["declaratoria_activa"].apply(es_activo)
+        orden = ["Activa", "No activa"]
+        etiquetas = serie.map({True: "Activa", False: "No activa"})
+        colores = {"Activa": AZUL_OPS, "No activa": "#B8C5CF"}
+    elif tipo == "impacto":
+        serie = datos["impacto_salud_documentado"].apply(es_impacto)
+        orden = ["Documentado", "No documentado"]
+        etiquetas = serie.map({True: "Documentado", False: "No documentado"})
+        colores = {"Documentado": AZUL_SEC, "No documentado": "#B8C5CF"}
+    else:
+        raise ValueError(f"Tipo no reconocido: {tipo}")
+
+    tmp = datos[["pais"]].copy()
+    tmp["Estado"] = etiquetas.values
+    filas = []
+    for estado in orden:
+        nombres = (
+            tmp.loc[tmp["Estado"] == estado, "pais"]
+            .dropna()
+            .astype(str)
+            .sort_values()
+            .tolist()
+        )
+        nombres_txt = " · ".join(html.escape(x) for x in nombres) if nombres else "Ninguno"
+        filas.append(
+            f'<div class="country-breakdown-row">'
+            f'<div class="country-breakdown-head">'
+            f'<span class="country-breakdown-label">'
+            f'<span class="country-breakdown-dot" style="background:{colores[estado]}"></span>'
+            f'{html.escape(estado)}</span>'
+            f'<span class="country-breakdown-count">{len(nombres)}</span>'
+            f'</div>'
+            f'<div class="country-breakdown-names">{nombres_txt}</div>'
+            f'</div>'
+        )
+    return '<div class="country-breakdown">' + "".join(filas) + '</div>'
+
+
+def lista_paises_atribucion_html(datos):
+    """Lista visible de países por categoría de atribución a El Niño."""
+    if datos.empty:
+        return '<div class="country-breakdown"></div>'
+
+    tmp = datos[["pais", "atribucion_elnino"]].copy()
+    tmp["Atribución"] = tmp["atribucion_elnino"].apply(clasificar_atribucion)
+    filas = []
+    for categoria in ATRIBUCION_ORDEN:
+        nombres = (
+            tmp.loc[tmp["Atribución"] == categoria, "pais"]
+            .dropna()
+            .astype(str)
+            .sort_values()
+            .tolist()
+        )
+        if not nombres:
+            continue
+        nombres_txt = " · ".join(html.escape(x) for x in nombres)
+        filas.append(
+            f'<div class="country-breakdown-row">'
+            f'<div class="country-breakdown-head">'
+            f'<span class="country-breakdown-label">'
+            f'<span class="country-breakdown-dot" style="background:{ATRIBUCION_COLORES[categoria]}"></span>'
+            f'{html.escape(categoria)}</span>'
+            f'<span class="country-breakdown-count">{len(nombres)}</span>'
+            f'</div>'
+            f'<div class="country-breakdown-names">{nombres_txt}</div>'
+            f'</div>'
+        )
+    return '<div class="country-breakdown">' + "".join(filas) + '</div>'
+
+
 def grafico_estado_binario(datos, tipo, altura=300):
     """Resumen de países por declaratoria o impacto, con nombres en el hover."""
     if datos.empty:
@@ -928,11 +1033,13 @@ def grafico_estado_binario(datos, tipo, altura=300):
         yaxis_title=None,
         bargap=.42,
     )
+    paso = max(1, int(np.ceil(max_n / 8)))
     fig.update_xaxes(
         gridcolor="#EAF0F4",
-        dtick=1,
+        dtick=paso,
         range=[0, max_n + max(1, max_n * .12)],
         zeroline=False,
+        tickangle=0,
     )
     fig.update_yaxes(
         categoryorder="array",
@@ -1300,6 +1407,10 @@ with r1:
             use_container_width=True,
             config=CHART_CONFIG,
         )
+        st.markdown(
+            lista_paises_estado_html(filtrado, "declaratoria"),
+            unsafe_allow_html=True,
+        )
 with r2:
     with st.container(border=True):
         st.markdown("**Impacto en salud documentado**")
@@ -1308,6 +1419,10 @@ with r2:
             use_container_width=True,
             config=CHART_CONFIG,
         )
+        st.markdown(
+            lista_paises_estado_html(filtrado, "impacto"),
+            unsafe_allow_html=True,
+        )
 with r3:
     with st.container(border=True):
         st.markdown("**Atribución a El Niño**")
@@ -1315,6 +1430,10 @@ with r3:
             grafico_atribucion_elnino(filtrado),
             use_container_width=True,
             config=CHART_CONFIG,
+        )
+        st.markdown(
+            lista_paises_atribucion_html(filtrado),
+            unsafe_allow_html=True,
         )
 
 # Evolución temporal
