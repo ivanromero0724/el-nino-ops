@@ -204,6 +204,35 @@ jobs:
               page = browser.new_page(viewport={"width": 1440, "height": 1100})
               page.goto("http://127.0.0.1:8501", wait_until="networkidle", timeout=120000)
 
+              # Diagnóstico de alineación mapa/leyenda: imprimir la jerarquía
+              # del contenedor del mapa y las cajas visibles para corregir con
+              # medidas reales, no por aproximación visual.
+              try:
+                  marker = page.locator(".map-card-marker").first
+                  marker.wait_for(state="attached", timeout=15000)
+                  ancestors = marker.evaluate("""el => {
+                      const out = [];
+                      let p = el;
+                      for (let i = 0; p && i < 12; i++, p = p.parentElement) {
+                          const r = p.getBoundingClientRect();
+                          out.push({
+                              tag: p.tagName,
+                              testid: p.getAttribute("data-testid"),
+                              cls: typeof p.className === "string" ? p.className : "",
+                              x: r.x, y: r.y, w: r.width, h: r.height,
+                              bottom: r.bottom
+                          });
+                      }
+                      return out;
+                  }""")
+                  priority_box = page.locator(".priority-card").first.bounding_box()
+                  iframe_box = page.locator('div[data-testid="stIFrame"]').first.bounding_box()
+                  print("ALIGN_ANCESTORS", ancestors)
+                  print("ALIGN_PRIORITY", priority_box)
+                  print("ALIGN_IFRAME", iframe_box)
+              except Exception as exc:
+                  print("ALIGN_DIAGNOSTIC_ERROR", repr(exc))
+
               # Esperar a que el componente Folium esté montado.
               folium_frame = None
               for _ in range(60):
