@@ -50,19 +50,25 @@ AMENAZAS = {
 # Ajustes exclusivos del dashboard interactivo para dar más aire a los callouts.
 # No modifican las posiciones del mapa estático de SitRep.
 CALLOUT_ROUTES_DASHBOARD = {
-    "MEX": [(-106.0, 28.8), (-104.0, 27.4), (-102.0, 23.5)],
-    "GTM": [(-112.0, 28.8), (-103.0, 27.2), (-96.0, 21.4), (-90.4, 15.7)],
-    "HND": [(-112.0, 20.2), (-102.0, 19.3), (-94.0, 16.6), (-86.7, 14.8)],
-    "SLV": [(-112.0, 11.7), (-102.0, 11.9), (-95.0, 12.8), (-88.9, 13.7)],
-    "CRI": [(-112.0, 3.0), (-102.0, 3.8), (-94.0, 5.7), (-88.0, 7.8), (-84.2, 9.8)],
-    "COL": [(-94.0, -1.2), (-84.0, -1.2), (-78.0, 1.2), (-74.5, 4.2)],
-    "ECU": [(-94.0, -10.0), (-84.0, -10.0), (-78.0, -6.2), (-78.4, -1.5)],
-    "PER": [(-94.0, -19.0), (-84.0, -19.0), (-79.0, -12.5), (-75.5, -9.5)],
-    "BOL": [(-83.5, -28.8), (-73.0, -28.8), (-68.0, -21.5), (-64.8, -16.8)],
-    "CHL": [(-103.0, -39.5), (-86.0, -39.5), (-76.0, -35.5), (-71.2, -33.5)],
-    "JAM": [(-82.5, 30.2), (-80.5, 25.0), (-77.3, 18.2)],
-    "PRI": [(-68.0, 30.2), (-66.8, 24.0), (-66.4, 18.2)],
-    "TTO": [(-58.0, 20.5), (-59.2, 16.0), (-61.2, 10.5)],
+    # México / Centroamérica: filas amplias y separadas.
+    "MEX": [(-101.0, 34.0), (-101.5, 29.5), (-102.0, 23.5)],
+    "GTM": [(-114.0, 27.0), (-104.0, 26.0), (-96.0, 21.0), (-90.4, 15.7)],
+    "HND": [(-114.0, 18.5), (-104.0, 18.2), (-95.0, 16.3), (-86.7, 14.8)],
+    "SLV": [(-114.0, 10.0), (-104.0, 10.3), (-96.0, 12.0), (-88.9, 13.7)],
+    "CRI": [(-114.0, 1.5), (-104.0, 2.2), (-95.0, 5.0), (-88.0, 7.8), (-84.2, 9.8)],
+    "PAN": [(-72.0, 15.5), (-75.0, 13.0), (-78.5, 10.8), (-80.3, 8.5)],
+
+    # Caribe: separar México, Jamaica, Puerto Rico y Trinidad y Tobago.
+    "JAM": [(-74.0, 33.5), (-75.0, 26.0), (-77.3, 18.2)],
+    "PRI": [(-61.5, 33.5), (-63.5, 26.0), (-66.4, 18.2)],
+    "TTO": [(-54.0, 21.5), (-57.5, 16.0), (-61.2, 10.5)],
+
+    # Costa pacífica de Sudamérica: columnas y filas separadas.
+    "COL": [(-101.0, 0.5), (-88.0, 0.5), (-79.0, 2.0), (-74.5, 4.2)],
+    "ECU": [(-101.0, -9.5), (-88.0, -9.5), (-79.0, -6.0), (-78.4, -1.5)],
+    "PER": [(-101.0, -19.5), (-88.0, -19.5), (-80.0, -13.0), (-75.5, -9.5)],
+    "BOL": [(-88.0, -29.5), (-76.0, -29.5), (-69.0, -21.5), (-64.8, -16.8)],
+    "CHL": [(-105.0, -40.5), (-88.0, -40.5), (-77.0, -36.0), (-71.2, -33.5)],
 }
 
 
@@ -412,28 +418,28 @@ def _construir_folium(frame_globals):
         padding_bottom_right=[10, 10],
     )
 
-    # El ajuste vertical de fitBounds deja demasiado Pacífico en pantallas anchas.
-    # Desplazar la cámara hacia el este mueve visualmente el continente a la
-    # izquierda del panel, sin cambiar el zoom ni sacrificar Sudamérica.
+    # Centrado determinístico de la vista inicial. Mantiene el zoom calculado
+    # por fitBounds, pero coloca el eje visual del continente en el centro del
+    # panel para que no quede pegado a la izquierda.
     nombre_mapa = m.get_name()
     m.get_root().script.add_child(
         folium.Element(
             f"""
             (function() {{
                 var intentos = 0;
-                function desplazarContinente() {{
+                function centrarContinente() {{
                     var mapa = window["{nombre_mapa}"];
                     if (!mapa) {{
                         if (intentos++ < 100) {{
-                            setTimeout(desplazarContinente, 50);
+                            setTimeout(centrarContinente, 50);
                         }}
                         return;
                     }}
                     setTimeout(function() {{
-                        mapa.panBy([220, 0], {{animate: false}});
+                        mapa.setView([-11.5, -76.0], mapa.getZoom(), {{animate: false}});
                     }}, 120);
                 }}
-                desplazarContinente();
+                centrarContinente();
             }})();
             """
         )
