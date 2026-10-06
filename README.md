@@ -46,4 +46,4 @@ El workflow **Generar mapa SitRep** crea el PNG y PDF del corte vigente. El work
 
 ## Geografía
 
-La geografía regional proviene de Natural Earth Admin 0 Countries, escala 1:50m, en EPSG:4326. La unión con la base se realiza mediante `iso3` ↔ `ISO_CC`.
+La geografía regional proviene de Natural Earth Admin 0 Countries, escala 1:50m, en EPSG:4326. La unión con la base se realiza mediante `iso3` ↔ `ISO_CC`. El GeoPackage se reconstruye con `python scripts/preparar_geografia.py` solo cuando sea necesario actualizar la geografía; el workflow mensual usa el archivo ya versionado.

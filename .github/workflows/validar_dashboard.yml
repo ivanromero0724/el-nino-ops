@@ -222,24 +222,6 @@ jobs:
               try:
                   iframe = page.locator("iframe").first
                   iframe.wait_for(state="attached", timeout=15000)
-                  iframe_ancestors = iframe.evaluate("""el => {
-                      const out = [];
-                      let p = el;
-                      for (let i = 0; p && i < 12; i++, p = p.parentElement) {
-                          const r = p.getBoundingClientRect();
-                          const cs = getComputedStyle(p);
-                          out.push({
-                              tag: p.tagName,
-                              testid: p.getAttribute("data-testid"),
-                              cls: typeof p.className === "string" ? p.className : "",
-                              x:r.x, y:r.y, w:r.width, h:r.height, bottom:r.bottom,
-                              borderTop: cs.borderTopWidth,
-                              borderBottom: cs.borderBottomWidth,
-                              borderRadius: cs.borderRadius
-                          });
-                      }
-                      return out;
-                  }""")
                   priority_box = page.locator(".priority-card").first.bounding_box()
                   map_box = iframe.evaluate("""el => {
                       let p = el.parentElement;
@@ -264,7 +246,6 @@ jobs:
                       }
                       return null;
                   }""")
-                  print("ALIGN_IFRAME_ANCESTORS", iframe_ancestors)
                   print("ALIGN_MAP", map_box)
                   print("ALIGN_PRIORITY", priority_box)
 

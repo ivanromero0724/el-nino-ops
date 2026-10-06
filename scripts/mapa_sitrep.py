@@ -356,6 +356,7 @@ def main():
         facecolor="white",
         bbox_inches="tight",
         pad_inches=0,
+        metadata={"CreationDate": None, "ModDate": None},
     )
     plt.close(fig)
 

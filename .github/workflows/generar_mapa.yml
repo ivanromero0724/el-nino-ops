@@ -5,8 +5,8 @@ on:
   push:
     paths:
       - "data/base_maestra_elnino.csv"
+      - "data/geografia/paises_americas.gpkg"
       - "scripts/mapa_sitrep.py"
-      - "scripts/preparar_geografia.py"
       - "assets/ops_oms.png"
       - "requirements.txt"
       - ".github/workflows/generar_mapa.yml"
@@ -36,9 +36,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Preparar geografía
-        run: python scripts/preparar_geografia.py
-
       - name: Generar mapa
         run: python scripts/mapa_sitrep.py
 
@@ -53,18 +50,18 @@ jobs:
           pdfs = list(out.glob("Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep*.pdf"))
           revisiones = list(out.glob("*_rev*.png"))
 
-          assert geo.exists() and geo.stat().st_size > 0, "GeoPackage no generado"
+          assert geo.exists() and geo.stat().st_size > 0, "GeoPackage ausente"
           assert pngs, "No se generó PNG"
           assert pdfs, "No se generó PDF"
           assert not revisiones, f"No deben existir copias revXX: {revisiones}"
-          print("OK:", geo, pngs[-1], pdfs[-1])
+          print("OK:", pngs[-1], pdfs[-1])
           PY
 
       - name: Guardar productos generados
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/geografia/paises_americas.gpkg outputs/mapas/
+          git add outputs/mapas/
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
             exit 0
