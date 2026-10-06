@@ -262,6 +262,9 @@ st.markdown(
             color:{TEXTO}; font-size:.84rem;
         }}
         .legend-row + .legend-row {{border-top:1px solid #EEF3F6;}}
+        .legend-card.amenazas-card .legend-row {{
+            min-height:56px;
+        }}
         .legend-label {{
             display:flex; align-items:center; gap:.55rem; min-width:0;
             line-height:1.22;
@@ -1043,7 +1046,7 @@ with col_resumen:
             f'</div>'
         )
     st.markdown(
-        '<div class="legend-card">'
+        '<div class="legend-card amenazas-card">'
         '<div class="legend-title">Principales amenazas</div>'
         '<div class="legend-body">' + ''.join(filas_amenazas) + '</div>'
         '</div>',
