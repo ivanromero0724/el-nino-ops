@@ -357,6 +357,160 @@ st.markdown(
             display:inline-block;
             flex:0 0 9px;
         }}
+
+        .synthesis-legend {{
+            display:flex;
+            flex-wrap:wrap;
+            align-items:center;
+            gap:.42rem 1.05rem;
+            margin:.1rem 0 .7rem 0;
+            color:#60788A;
+            font-size:.76rem;
+            line-height:1.35;
+        }}
+        .synthesis-legend-item {{
+            display:inline-flex;
+            align-items:center;
+            gap:.34rem;
+            white-space:nowrap;
+        }}
+        .synthesis-legend-symbol {{
+            font-size:1rem;
+            font-weight:900;
+            line-height:1;
+        }}
+        .synthesis-note {{
+            color:#728596;
+            font-size:.76rem;
+            line-height:1.45;
+            margin:.15rem 0 .65rem 0;
+        }}
+        .synthesis-wrap {{
+            width:100%;
+            max-height:650px;
+            overflow:auto;
+            overscroll-behavior:contain;
+            scrollbar-gutter:stable;
+            border:1px solid #DCE8EF;
+            border-radius:12px;
+            background:#FFFFFF;
+        }}
+        .synthesis-table {{
+            width:100%;
+            min-width:1180px;
+            border-collapse:separate;
+            border-spacing:0;
+            table-layout:fixed;
+            font-size:.76rem;
+            color:{TEXTO};
+        }}
+        .synthesis-table th,
+        .synthesis-table td {{
+            border-bottom:1px solid #E7EEF3;
+            border-right:1px solid #EDF2F5;
+            padding:.46rem .48rem;
+            vertical-align:middle;
+            text-align:center;
+            background:#FFFFFF;
+        }}
+        .synthesis-table th:last-child,
+        .synthesis-table td:last-child {{border-right:none;}}
+        .synthesis-table thead th {{
+            position:sticky;
+            z-index:5;
+            font-weight:800;
+            line-height:1.15;
+        }}
+        .synthesis-table thead tr:first-child th {{
+            top:0;
+            color:#FFFFFF;
+            font-size:.73rem;
+            padding:.48rem .42rem;
+        }}
+        .synthesis-table thead tr:nth-child(2) th {{
+            top:31px;
+            background:#F4F8FB;
+            color:#425E73;
+            font-size:.69rem;
+            padding:.5rem .38rem;
+        }}
+        .synthesis-table .synth-country-head {{
+            background:#006B86 !important;
+            text-align:left;
+            padding-left:.65rem !important;
+        }}
+        .synthesis-table .synth-group-alert {{background:#7353A6;}}
+        .synthesis-table .synth-group-hazard {{background:#198CC7;}}
+        .synthesis-table .synth-group-health {{background:#178A78;}}
+        .synthesis-table .synth-group-services {{background:#B34735;}}
+        .synthesis-table .synth-country {{
+            position:sticky;
+            left:0;
+            z-index:3;
+            text-align:left;
+            font-weight:800;
+            color:#006B86;
+            background:#FFFFFF;
+            box-shadow:1px 0 0 #DCE8EF;
+            white-space:normal;
+        }}
+        .synthesis-table thead .synth-country-head {{
+            left:0;
+            z-index:8;
+        }}
+        .synthesis-table tbody tr:nth-child(even):not(.synth-region-row) td {{
+            background:#F8FAFC;
+        }}
+        .synthesis-table tbody tr:nth-child(even):not(.synth-region-row) .synth-country {{
+            background:#F8FAFC;
+        }}
+        .synth-region-row td {{
+            background:#DDEAF3 !important;
+            color:#006B86;
+            font-weight:900;
+            text-transform:uppercase;
+            letter-spacing:.035em;
+            text-align:left !important;
+            padding:.38rem .55rem !important;
+        }}
+        .synth-symbol {{
+            display:inline-block;
+            min-width:1.05rem;
+            font-size:1rem;
+            font-weight:900;
+            line-height:1;
+            cursor:default;
+        }}
+        .synth-symbol.hazard {{color:#198CC7;}}
+        .synth-symbol.health {{color:#178A78;}}
+        .synth-symbol.services {{color:#B34735;}}
+        .synth-small-text {{
+            display:inline-block;
+            color:#4E677A;
+            font-size:.71rem;
+            line-height:1.18;
+            text-align:left;
+        }}
+        .synth-summary-cell {{
+            text-align:left !important;
+            line-height:1.55;
+        }}
+        .synth-summary-token {{
+            display:inline-block;
+            margin:0 .38rem .12rem 0;
+            white-space:nowrap;
+        }}
+        .synth-priority {{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            min-height:24px;
+            padding:.2rem .52rem;
+            border-radius:999px;
+            font-size:.70rem;
+            font-weight:800;
+            white-space:nowrap;
+        }}
         @media (max-width: 900px) {{
             .status-table {{min-width:760px;}}
         }}
@@ -968,6 +1122,307 @@ def tabla_respuesta_pais_html(datos):
     )
 
 
+def _texto_indicador(fila, campos):
+    partes = []
+    for campo in campos:
+        if campo in fila.index:
+            valor = texto(fila.get(campo), "")
+            if valor:
+                partes.append(valor)
+    return " ".join(partes).lower()
+
+
+def _estado_indicador(fila, columna, dominio="amenaza"):
+    """Traduce la base actual a la simbología compacta del SitRep."""
+    if columna not in fila.index or pd.isna(fila.get(columna)) or int(fila.get(columna)) != 1:
+        return ""
+
+    if dominio == "servicio_potencial":
+        return "◇"
+    if dominio == "servicio":
+        return "●"
+
+    campos = (
+        ["amenazas_resumen", "situacion_predominante", "observaciones"]
+        if dominio == "amenaza"
+        else ["impacto_salud_resumen", "observaciones"]
+    )
+    t = _texto_indicador(fila, campos)
+
+    pendientes = (
+        "por confirmar", "pendiente de confirm", "requiere corrobor",
+        "requieren corrobor", "información pendiente", "informacion pendiente",
+        "indicios sin atribución", "indicios sin atribucion"
+    )
+    if any(x in t for x in pendientes):
+        return "▲"
+
+    if dominio == "amenaza":
+        atrib = texto(fila.get("atribucion_elnino"), "").lower()
+        situacion = texto(fila.get("situacion_predominante"), "").lower()
+        if "prospect" in atrib or "riesgo prospectivo" in situacion:
+            return "○"
+    else:
+        if not es_impacto(fila.get("impacto_salud_documentado")):
+            return "○"
+
+    return "●"
+
+
+def _titulo_simbolo(simbolo):
+    return {
+        "●": "Observado o reportado",
+        "○": "Riesgo, proyección o impacto potencial",
+        "▲": "Información pendiente de validación",
+        "◇": "Impacto potencial o medida de preparación",
+    }.get(simbolo, "")
+
+
+def _simbolo_html(simbolo, dominio):
+    if not simbolo:
+        return ""
+    return (
+        f'<span class="synth-symbol {dominio}" '
+        f'title="{html.escape(_titulo_simbolo(simbolo), quote=True)}">{simbolo}</span>'
+    )
+
+
+def _otras_afectaciones_cortas(fila):
+    """Extrae etiquetas breves de otras afectaciones descritas en el SitRep."""
+    t = _texto_indicador(fila, ["impacto_salud_resumen", "amenazas_resumen", "observaciones"])
+    etiquetas = []
+    reglas = [
+        (("agua", "saneamiento"), "Agua y saneamiento"),
+        (("humo",), "Humo de incendios"),
+        (("calidad del aire",), "Calidad del aire"),
+        (("leptospirosis",), "Leptospirosis"),
+        (("calor",), "Calor"),
+        (("enfermedad", "hídr"), "Enf. hídricas"),
+        (("enfermedad", "hid"), "Enf. hídricas"),
+    ]
+    for palabras, etiqueta in reglas:
+        if all(p in t for p in palabras) and etiqueta not in etiquetas:
+            etiquetas.append(etiqueta)
+
+    if any(x in t for x in ["fallecid", "muert", "mortalidad"]):
+        etiquetas.append("Mortalidad (antec.)")
+
+    return etiquetas[:2]
+
+
+def _declaratoria_sintesis_html(fila):
+    activa = es_activo(fila.get("declaratoria_activa"))
+    detalle = texto(fila.get("nivel_declaratoria"), "")
+    if activa:
+        nivel = clasificar_nivel_declaratoria(detalle)
+        return (
+            '<div class="status-pill-group" '
+            f'title="{html.escape(detalle, quote=True)}">'
+            f'<span class="status-pill" style="background:{AZUL_OPS};color:#FFFFFF;">Activa</span>'
+            f'<span class="status-pill" style="background:#E8EFF7;color:{AZUL_OPS};">{html.escape(nivel)}</span>'
+            '</div>'
+        )
+
+    if alerta_institucional_sin_declaratoria(detalle):
+        return (
+            '<div class="status-pill-group" '
+            f'title="{html.escape(detalle, quote=True)}">'
+            '<span class="status-pill" style="background:#EDF2F5;color:#60788A;">No activa</span>'
+            '<span class="status-pill" style="background:#FFF1CC;color:#8A5A00;">Alerta institucional</span>'
+            '</div>'
+        )
+
+    return '<span class="status-pill" style="background:#EDF2F5;color:#60788A;">No activa</span>'
+
+
+def _servicio_observado_etiqueta(fila):
+    if int(fila.get("icono_servicios", 0) or 0) != 1:
+        return ""
+    t = _texto_indicador(fila, ["impacto_salud_resumen", "observaciones"])
+    if "presión" in t or "presion" in t:
+        return "Presión"
+    return "Afectación"
+
+
+def tabla_sintesis_regional_html(datos, vista="Resumida"):
+    """Tabla interactiva inspirada en la síntesis regional del SitRep."""
+    if datos.empty:
+        return '<div class="empty-state">No hay países para la selección actual.</div>'
+
+    tmp = datos.copy()
+    tmp["subregion"] = tmp["subregion"].fillna("Sin subregión")
+    tmp["_suborden"] = pd.Categorical(
+        tmp["subregion"],
+        categories=SUBREGION_ORDEN + ["Sin subregión"],
+        ordered=True,
+    )
+    tmp = tmp.sort_values(
+        ["_suborden", "pais"],
+        key=lambda s: s.astype(str).str.lower() if s.name == "pais" else s,
+    )
+
+    filas = []
+    for subregion, grupo in tmp.groupby("subregion", sort=False, observed=True):
+        if grupo.empty:
+            continue
+
+        colspan = 6 if vista == "Resumida" else 10
+        filas.append(
+            f'<tr class="synth-region-row"><td colspan="{colspan}">'
+            f'{html.escape(str(subregion))}</td></tr>'
+        )
+
+        for _, fila in grupo.iterrows():
+            pais = html.escape(texto(fila.get("pais"), "—"))
+            decl = _declaratoria_sintesis_html(fila)
+
+            estados = {
+                "Sequía": _estado_indicador(fila, "icono_agua", "amenaza"),
+                "Lluvias": _estado_indicador(fila, "icono_inundaciones", "amenaza"),
+                "Incendios": _estado_indicador(fila, "icono_incendios", "amenaza"),
+                "Alimentación": _estado_indicador(fila, "icono_alimentos", "salud"),
+                "Arbovirosis": _estado_indicador(fila, "icono_arbovirosis", "salud"),
+            }
+            otras = _otras_afectaciones_cortas(fila)
+            serv_obs = _estado_indicador(fila, "icono_servicios", "servicio")
+            serv_pot = _estado_indicador(fila, "icono_servicios_potencial", "servicio_potencial")
+
+            if vista == "Resumida":
+                amenazas_tokens = []
+                for nombre in ["Sequía", "Lluvias", "Incendios"]:
+                    s = estados[nombre]
+                    if s:
+                        amenazas_tokens.append(
+                            f'<span class="synth-summary-token">{_simbolo_html(s, "hazard")} {html.escape(nombre)}</span>'
+                        )
+                impacto_tokens = []
+                for nombre in ["Alimentación", "Arbovirosis"]:
+                    s = estados[nombre]
+                    if s:
+                        impacto_tokens.append(
+                            f'<span class="synth-summary-token">{_simbolo_html(s, "health")} {html.escape(nombre)}</span>'
+                        )
+                for etiqueta in otras:
+                    impacto_tokens.append(
+                        f'<span class="synth-summary-token"><span class="synth-symbol health">○</span> {html.escape(etiqueta)}</span>'
+                    )
+
+                servicios_tokens = []
+                if serv_obs:
+                    etiqueta_serv = _servicio_observado_etiqueta(fila)
+                    servicios_tokens.append(
+                        f'<span class="synth-summary-token">{_simbolo_html(serv_obs, "services")} {html.escape(etiqueta_serv)}</span>'
+                    )
+                if serv_pot:
+                    servicios_tokens.append(
+                        f'<span class="synth-summary-token">{_simbolo_html(serv_pot, "services")} Potencial</span>'
+                    )
+
+                prioridad = texto(fila.get("prioridad"), "Sin priorización")
+                color_p = COLORES_PRIORIDAD.get(prioridad, GRIS)
+                color_txt = "#5D4B00" if prioridad == "Baja" else "#FFFFFF"
+                if prioridad == "Sin priorización":
+                    color_txt = "#4F6474"
+
+                filas.append(
+                    "<tr>"
+                    f'<td class="synth-country">{pais}</td>'
+                    f'<td style="text-align:left">{decl}</td>'
+                    f'<td class="synth-summary-cell">{"".join(amenazas_tokens) or "—"}</td>'
+                    f'<td class="synth-summary-cell">{"".join(impacto_tokens) or "—"}</td>'
+                    f'<td class="synth-summary-cell">{"".join(servicios_tokens) or "—"}</td>'
+                    f'<td><span class="synth-priority" style="background:{color_p};color:{color_txt};">{html.escape(prioridad)}</span></td>'
+                    "</tr>"
+                )
+            else:
+                otras_html = "<br>".join(
+                    f'<span class="synth-small-text">○ {html.escape(x)}</span>' for x in otras
+                )
+                serv_obs_html = ""
+                if serv_obs:
+                    serv_obs_html = (
+                        _simbolo_html(serv_obs, "services")
+                        + f'<span class="synth-small-text"> {_servicio_observado_etiqueta(fila)}</span>'
+                    )
+
+                filas.append(
+                    "<tr>"
+                    f'<td class="synth-country">{pais}</td>'
+                    f'<td style="text-align:left">{decl}</td>'
+                    f'<td>{_simbolo_html(estados["Sequía"], "hazard")}</td>'
+                    f'<td>{_simbolo_html(estados["Lluvias"], "hazard")}</td>'
+                    f'<td>{_simbolo_html(estados["Incendios"], "hazard")}</td>'
+                    f'<td>{_simbolo_html(estados["Alimentación"], "health")}</td>'
+                    f'<td>{_simbolo_html(estados["Arbovirosis"], "health")}</td>'
+                    f'<td style="text-align:left">{otras_html}</td>'
+                    f'<td>{serv_obs_html}</td>'
+                    f'<td>{_simbolo_html(serv_pot, "services")}</td>'
+                    "</tr>"
+                )
+
+    if vista == "Resumida":
+        encabezado = (
+            '<thead><tr>'
+            '<th class="synth-country-head" rowspan="2" style="width:15%">País / territorio</th>'
+            '<th class="synth-group-alert" rowspan="2" style="width:20%">Declaratoria / alerta</th>'
+            '<th class="synth-group-hazard" rowspan="2" style="width:21%">Amenazas hidrometeorológicas</th>'
+            '<th class="synth-group-health" rowspan="2" style="width:22%">Impacto en salud pública</th>'
+            '<th class="synth-group-services" rowspan="2" style="width:14%">Servicios de salud</th>'
+            '<th rowspan="2" style="background:#5C7182;width:8%">Prioridad</th>'
+            '</tr><tr></tr></thead>'
+        )
+        min_width = "1000px"
+    else:
+        encabezado = (
+            '<thead>'
+            '<tr>'
+            '<th class="synth-country-head" rowspan="2" style="width:14%">País / territorio</th>'
+            '<th class="synth-group-alert" colspan="1">Alertas / emergencias</th>'
+            '<th class="synth-group-hazard" colspan="3">Amenazas hidrometeorológicas y ambientales</th>'
+            '<th class="synth-group-health" colspan="3">Impacto en salud pública</th>'
+            '<th class="synth-group-services" colspan="2">Servicios de salud</th>'
+            '</tr>'
+            '<tr>'
+            '<th>Declaratoria / alerta</th>'
+            '<th>Sequía / déficit hídrico</th>'
+            '<th>Lluvias / inundaciones</th>'
+            '<th>Incendios</th>'
+            '<th>Inseguridad alimentaria / desnutrición</th>'
+            '<th>Enfermedades vectoriales / arbovirosis</th>'
+            '<th>Otras afectaciones</th>'
+            '<th>Afectación o presión observada</th>'
+            '<th>Impacto potencial</th>'
+            '</tr>'
+            '</thead>'
+        )
+        min_width = "1280px"
+
+    return (
+        '<div class="synthesis-wrap">'
+        f'<table class="synthesis-table" style="min-width:{min_width}">'
+        + encabezado
+        + '<tbody>' + "".join(filas) + '</tbody></table></div>'
+    )
+
+
+def leyenda_sintesis_html():
+    items = [
+        ("●", "Observado o reportado", "#4E677A"),
+        ("○", "Riesgo, proyección o impacto potencial", "#4E677A"),
+        ("▲", "Información pendiente de validación", "#4E677A"),
+        ("◇", "Impacto potencial o medida de preparación", "#4E677A"),
+    ]
+    return (
+        '<div class="synthesis-legend">'
+        + "".join(
+            f'<span class="synthesis-legend-item"><span class="synthesis-legend-symbol" '
+            f'style="color:{color}">{simbolo}</span>{html.escape(etiqueta)}</span>'
+            for simbolo, etiqueta, color in items
+        )
+        + '</div>'
+    )
+
+
 def leyenda_subregiones_html(datos):
     """Leyenda compartida de colores por subregión para los gráficos analíticos."""
     if datos.empty:
@@ -1437,6 +1892,31 @@ with col_resumen:
         '</div>',
         unsafe_allow_html=True,
     )
+
+# Síntesis regional por país y territorio
+section_header(
+    "Síntesis regional por país y territorio",
+    "Lectura rápida del corte seleccionado, inspirada en la tabla de síntesis del SitRep",
+)
+vista_sintesis = st.radio(
+    "Vista de la tabla",
+    ["Resumida", "Completa"],
+    horizontal=True,
+    key="vista_sintesis_regional",
+    label_visibility="collapsed",
+)
+st.markdown(leyenda_sintesis_html(), unsafe_allow_html=True)
+st.markdown(
+    '<div class="synthesis-note">La vista resumida prioriza lectura rápida. '
+    'La vista completa conserva los bloques temáticos del SitRep. '
+    'La simbología se deriva de la base maestra actual; los estados más finos se podrán '
+    'estructurar explícitamente en una siguiente iteración.</div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    tabla_sintesis_regional_html(filtrado, vista=vista_sintesis),
+    unsafe_allow_html=True,
+)
 
 # Situación regional
 section_header("Situación regional", "Comparación territorial y perfil de amenazas")
