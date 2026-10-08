@@ -1175,14 +1175,44 @@ def heatmap_evolucion(base, altura=None):
             hovertemplate="<b>%{y}</b><br>%{x}<br>%{customdata}<extra></extra>",
         )
     )
+
+    # Leyenda explícita para interpretar los colores del heatmap.
+    # Se agregan trazas vacías para mantener la misma simbología usada en
+    # "Países por nivel de prioridad" sin alterar los datos del gráfico.
+    for prioridad in ORDEN_PRIORIDAD:
+        fig.add_trace(
+            go.Scatter(
+                x=[None],
+                y=[None],
+                mode="markers",
+                marker=dict(
+                    size=9,
+                    color=COLORES_PRIORIDAD[prioridad],
+                    symbol="square",
+                ),
+                name=prioridad,
+                hoverinfo="skip",
+                showlegend=True,
+            )
+        )
+
     if altura is None:
         altura = max(350, 25 * len(m) + 80)
 
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=4, t=8, b=35),
+        margin=dict(l=0, r=4, t=8, b=55),
         paper_bgcolor="white",
         plot_bgcolor="white",
+        legend_title_text="",
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-.10,
+            xanchor="left",
+            x=0,
+            font=dict(size=10),
+        ),
     )
     fig.update_yaxes(autorange="reversed", tickfont=dict(size=10))
     return fig
