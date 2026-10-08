@@ -1097,7 +1097,7 @@ def grafico_atribucion_elnino(datos, altura=300):
     return fig
 
 
-def evolucion_prioridad(base):
+def evolucion_prioridad(base, altura=330):
     t = (
         base.groupby(["sitrep_numero", "fecha_corte", "prioridad"])
         .size()
@@ -1118,7 +1118,7 @@ def evolucion_prioridad(base):
         category_orders={"prioridad": ORDEN_PRIORIDAD},
     )
     fig.update_layout(
-        height=330,
+        height=altura,
         margin=dict(l=5, r=5, t=8, b=55),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -1132,7 +1132,7 @@ def evolucion_prioridad(base):
     return fig
 
 
-def heatmap_evolucion(base):
+def heatmap_evolucion(base, altura=None):
     orden_s = (
         base[["sitrep_numero", "fecha_corte", "sitrep_id"]]
         .drop_duplicates()
@@ -1175,8 +1175,11 @@ def heatmap_evolucion(base):
             hovertemplate="<b>%{y}</b><br>%{x}<br>%{customdata}<extra></extra>",
         )
     )
+    if altura is None:
+        altura = max(350, 25 * len(m) + 80)
+
     fig.update_layout(
-        height=max(350, 25 * len(m) + 80),
+        height=altura,
         margin=dict(l=0, r=4, t=8, b=35),
         paper_bgcolor="white",
         plot_bgcolor="white",
@@ -1417,15 +1420,28 @@ if base["sitrep_id"].nunique() < 2:
         unsafe_allow_html=True,
     )
 else:
+    # Ambos gráficos usan exactamente la misma altura para que las tarjetas
+    # queden alineadas. La altura se adapta al número de países del heatmap.
+    n_paises_evolucion = max(1, int(base["pais"].nunique()))
+    altura_evolucion = max(350, min(620, 25 * n_paises_evolucion + 80))
+
     e1, e2 = st.columns([1, 1.18], gap="medium")
     with e1:
         with st.container(border=True):
             st.markdown("**Países por nivel de prioridad**")
-            st.plotly_chart(evolucion_prioridad(base), use_container_width=True, config=CHART_CONFIG)
+            st.plotly_chart(
+                evolucion_prioridad(base, altura=altura_evolucion),
+                use_container_width=True,
+                config=CHART_CONFIG,
+            )
     with e2:
         with st.container(border=True):
             st.markdown("**Evolución de prioridad por país**")
-            st.plotly_chart(heatmap_evolucion(base), use_container_width=True, config=CHART_CONFIG)
+            st.plotly_chart(
+                heatmap_evolucion(base, altura=altura_evolucion),
+                use_container_width=True,
+                config=CHART_CONFIG,
+            )
 
 # Detalle país
 section_header("Detalle por país", "Lectura cualitativa y cifras disponibles para el corte seleccionado")
