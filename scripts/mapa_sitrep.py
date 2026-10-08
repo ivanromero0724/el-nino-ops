@@ -9,7 +9,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, Circle, Rectangle, Ellipse, PathPatch, Polygon
 from matplotlib.path import Path as MplPath
-from matplotlib.offsetbox import AnnotationBbox, DrawingArea, OffsetImage, HPacker
+from matplotlib.offsetbox import AnnotationBbox, DrawingArea, OffsetImage, HPacker, VPacker
 from PIL import Image, ImageChops
 
 # ============================================================
@@ -132,9 +132,31 @@ ROUTES = {
     "TTO": [(-58.0, 19.5), (-59.0, 16.4), TARGET["TTO"]],
 }
 
-TAMANOS_ICONOS = {"MEX": 24, "GTM": 25, "COL": 23, "PER": 23, "ECU": 24}
-DESPLAZAMIENTO_ICONOS_X = {"COL": -6.0}
+TAMANOS_ICONOS = {
+    "MEX": 24,
+    "GTM": 25,
+    "COL": 23,
+    "PER": 23,
+    "ECU": 24,
+    # Brasil concentra varios pictogramas en el SitRep actual; se reduce
+    # ligeramente el tamaño para mantenerlos dentro del área cartográfica.
+    "BRA": 22,
+}
+DESPLAZAMIENTO_ICONOS_X = {
+    "COL": -6.0,
+    # Mueve el bloque de Brasil hacia el interior del país para evitar
+    # que los pictogramas invadan el panel de leyenda.
+    "BRA": -8.5,
+}
 DESPLAZAMIENTO_ICONOS_Y = -3.0
+DESPLAZAMIENTO_ICONOS_Y_EXTRA = {
+    # Al usar dos filas, se baja el bloque completo para separarlo del rótulo.
+    "BRA": -3.0,
+}
+MAX_ICONOS_POR_FILA = {
+    # Brasil puede tener hasta siete amenazas/impactos simultáneos.
+    "BRA": 4,
+}
 
 # ============================================================
 # CARGA DE LA BASE
@@ -261,10 +283,47 @@ def icono_servicios_potencial(size=27):
 
 ICONOS={"agua":icono_agua,"inundaciones":icono_inundaciones,"incendios":icono_incendios,"alimentos":icono_alimentos,"arbovirosis":icono_arbovirosis,"respiratorio":icono_respiratorio,"servicios":icono_servicios,"servicios_potencial":icono_servicios_potencial}
 
-def poner_iconos(ax,x,y,amenazas,size=27):
-    if not amenazas: return
-    grupo=HPacker(children=[ICONOS[a](size) for a in amenazas],align="center",pad=0,sep=5)
-    ax.add_artist(AnnotationBbox(grupo,(x,y),xycoords="data",frameon=False,box_alignment=(0,.5),zorder=25))
+def poner_iconos(ax, x, y, amenazas, size=27, max_por_fila=None):
+    """Dibuja pictogramas en una o varias filas sin desbordar el mapa."""
+    if not amenazas:
+        return
+
+    if not max_por_fila or len(amenazas) <= max_por_fila:
+        grupo = HPacker(
+            children=[ICONOS[a](size) for a in amenazas],
+            align="center",
+            pad=0,
+            sep=5,
+        )
+    else:
+        filas = []
+        for inicio in range(0, len(amenazas), max_por_fila):
+            lote = amenazas[inicio:inicio + max_por_fila]
+            filas.append(
+                HPacker(
+                    children=[ICONOS[a](size) for a in lote],
+                    align="center",
+                    pad=0,
+                    sep=5,
+                )
+            )
+        grupo = VPacker(
+            children=filas,
+            align="left",
+            pad=0,
+            sep=5,
+        )
+
+    ax.add_artist(
+        AnnotationBbox(
+            grupo,
+            (x, y),
+            xycoords="data",
+            frameon=False,
+            box_alignment=(0, .5),
+            zorder=25,
+        )
+    )
 
 # ============================================================
 # LOGO
@@ -302,7 +361,7 @@ def main():
 
     fig=plt.figure(figsize=(13,8.5),facecolor="white")
     fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))
-    ax=fig.add_axes([.020,0,.620,1.0]); ax_leg=fig.add_axes([.655,.225,.310,.715]); ax_logo=fig.add_axes([.650,.005,.340,.220])
+    ax=fig.add_axes([.020,0,.620,1.0]); ax_leg=fig.add_axes([.655,.205,.310,.735]); ax_logo=fig.add_axes([.650,.005,.340,.195])
     ax.set_facecolor(AZUL_MAR); ax.set_xlim(-121.5,-31); ax.set_ylim(-58,37.5); ax.set_aspect("equal",adjustable="box")
     ax.add_patch(Rectangle((-121.5,-58),90.5,95.5,facecolor=AZUL_MAR,edgecolor="none",zorder=0))
     americas.plot(ax=ax,color=GRIS_BASE,edgecolor=BLANCO,linewidth=.46,zorder=1)
@@ -312,7 +371,14 @@ def main():
 
     for iso,(x,y,nombre) in LABELS.items():
         ax.text(x,y,nombre,fontsize=8.6,fontweight="bold",color=TEXTO,ha="left",va="center",zorder=30)
-        poner_iconos(ax,x+.15+DESPLAZAMIENTO_ICONOS_X.get(iso,0),y+DESPLAZAMIENTO_ICONOS_Y,amenazas_por_iso.get(iso,[]),size=TAMANOS_ICONOS.get(iso,26))
+        poner_iconos(
+            ax,
+            x + .15 + DESPLAZAMIENTO_ICONOS_X.get(iso, 0),
+            y + DESPLAZAMIENTO_ICONOS_Y + DESPLAZAMIENTO_ICONOS_Y_EXTRA.get(iso, 0),
+            amenazas_por_iso.get(iso, []),
+            size=TAMANOS_ICONOS.get(iso, 26),
+            max_por_fila=MAX_ICONOS_POR_FILA.get(iso),
+        )
         ruta=ROUTES[iso]
         ax.plot([p[0] for p in ruta],[p[1] for p in ruta],color=AZUL_LINEA,linewidth=.70,solid_capstyle="round",solid_joinstyle="round",zorder=10)
         tx,ty=TARGET[iso]; ax.scatter([tx],[ty],s=10,color=AZUL_LINEA,zorder=11)
@@ -329,19 +395,37 @@ def main():
         yy=.840-i*.060
         ax_leg.scatter([.160],[yy],s=290,color=color,edgecolor="white",linewidth=.6,transform=ax_leg.transAxes,zorder=5)
         ax_leg.text(.255,yy,texto,fontsize=10,color=TEXTO,va="center",transform=ax_leg.transAxes)
-    ax_leg.plot([.1,.9],[.585,.585],color=BORDE_PANEL,linewidth=.8,transform=ax_leg.transAxes)
-    ax_leg.text(.105,.545,"Amenaza / impacto sanitario",fontsize=11.6,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
+    # Se abre un poco más el bloque de amenazas para evitar que los
+    # pictogramas y sus etiquetas queden visualmente amontonados en PNG/PDF.
+    ax_leg.plot([.1,.9],[.602,.602],color=BORDE_PANEL,linewidth=.8,transform=ax_leg.transAxes)
+    ax_leg.text(.105,.562,"Amenaza / impacto sanitario",fontsize=11.6,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
     orden=["agua","inundaciones","incendios","alimentos","arbovirosis","respiratorio","servicios","servicios_potencial"]
     for i,a in enumerate(orden):
-        yy=.475-i*.056
-        ax_leg.add_artist(AnnotationBbox(ICONOS[a](27),(.160,yy),xycoords=ax_leg.transAxes,frameon=False,box_alignment=(.5,.5)))
-        fs = 9.2 if a == "servicios_potencial" else 10
-        ax_leg.text(.255,yy,ETIQUETAS_AMENAZA[a],fontsize=fs,color=TEXTO,va="center",transform=ax_leg.transAxes)
+        yy=.500-i*.064
+        ax_leg.add_artist(
+            AnnotationBbox(
+                ICONOS[a](25),
+                (.160,yy),
+                xycoords=ax_leg.transAxes,
+                frameon=False,
+                box_alignment=(.5,.5),
+            )
+        )
+        fs = 9.0 if a == "servicios_potencial" else 9.8
+        ax_leg.text(
+            .255,
+            yy,
+            ETIQUETAS_AMENAZA[a],
+            fontsize=fs,
+            color=TEXTO,
+            va="center",
+            transform=ax_leg.transAxes,
+        )
 
     ax_logo.axis("off")
     if RUTA_LOGO.exists():
         logo=np.asarray(recortar_logo(RUTA_LOGO))
-        ax_logo.add_artist(AnnotationBbox(OffsetImage(logo,zoom=.50),(.5,.48),xycoords=ax_logo.transAxes,frameon=False,box_alignment=(.5,.5)))
+        ax_logo.add_artist(AnnotationBbox(OffsetImage(logo,zoom=.47),(.5,.48),xycoords=ax_logo.transAxes,frameon=False,box_alignment=(.5,.5)))
 
     # Exportar los dos productos canónicos del SitRep.
     fig.canvas.draw()
