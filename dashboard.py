@@ -324,6 +324,12 @@ st.markdown(
             white-space:nowrap;
             text-align:center;
         }}
+        .status-pill-group {{
+            display:flex;
+            flex-wrap:wrap;
+            align-items:center;
+            gap:.32rem;
+        }}
         .status-table-note {{
             color:#728596;
             font-size:.76rem;
@@ -487,6 +493,28 @@ def clasificar_atribucion(valor):
     if "prospect" in t:
         return "Prospectiva"
     return "Otra / por revisar"
+
+
+def clasificar_nivel_declaratoria(valor):
+    """Resume el alcance territorial de una declaratoria activa."""
+    t = texto(valor, "").strip().lower()
+    if not t or t in {"no aplica", "sin información", "sin informacion"}:
+        return "Nivel no especificado"
+
+    tiene_nacional = "nacional" in t
+    terminos_subnacionales = (
+        "subnacional", "departament", "municip", "estadual", "provinc",
+        "cantonal", "comun", "distrit", "territorial", "local"
+    )
+    tiene_subnacional = any(x in t for x in terminos_subnacionales)
+
+    if tiene_nacional and tiene_subnacional:
+        return "Nacional + subnacional"
+    if tiene_nacional:
+        return "Nacional"
+    if tiene_subnacional:
+        return "Subnacional"
+    return "Nivel no especificado"
 
 
 ATRIBUCION_ORDEN = [
@@ -811,7 +839,14 @@ def tabla_respuesta_pais_html(datos):
         return '<div class="empty-state">No hay países para la selección actual.</div>'
 
     tmp = datos[
-        ["pais", "subregion", "declaratoria_activa", "impacto_salud_documentado", "atribucion_elnino"]
+        [
+            "pais",
+            "subregion",
+            "declaratoria_activa",
+            "nivel_declaratoria",
+            "impacto_salud_documentado",
+            "atribucion_elnino",
+        ]
     ].copy()
     tmp["Declaratoria"] = tmp["declaratoria_activa"].apply(
         lambda x: "Activa" if es_activo(x) else "No activa"
@@ -856,11 +891,24 @@ def tabla_respuesta_pais_html(datos):
             impacto = str(fila["Impacto"])
             atribucion = str(fila["Atribución"])
 
-            declaratoria_html = (
-                pill(declaratoria, AZUL_OPS, "#FFFFFF")
-                if declaratoria == "Activa"
-                else pill(declaratoria, "#EDF2F5", "#60788A")
-            )
+            if declaratoria == "Activa":
+                nivel_decl = clasificar_nivel_declaratoria(fila.get("nivel_declaratoria"))
+                detalle_decl = texto(fila.get("nivel_declaratoria"), "Sin detalle de nivel")
+                nivel_color = {
+                    "Nacional": ("#DCEFFA", AZUL_OPS),
+                    "Subnacional": ("#E8F4EF", "#236B57"),
+                    "Nacional + subnacional": ("#EEE8F7", "#5D3E8C"),
+                    "Nivel no especificado": ("#F2F4F6", "#60788A"),
+                }.get(nivel_decl, ("#F2F4F6", "#60788A"))
+                declaratoria_html = (
+                    '<div class="status-pill-group" '
+                    f'title="{html.escape(detalle_decl, quote=True)}">'
+                    + pill(declaratoria, AZUL_OPS, "#FFFFFF")
+                    + pill(nivel_decl, nivel_color[0], nivel_color[1])
+                    + "</div>"
+                )
+            else:
+                declaratoria_html = pill(declaratoria, "#EDF2F5", "#60788A")
             impacto_html = (
                 pill(impacto, AZUL_SEC, "#FFFFFF")
                 if impacto == "Documentado"
@@ -887,7 +935,7 @@ def tabla_respuesta_pais_html(datos):
     return (
         '<div class="status-table-wrap">'
         '<table class="status-table">'
-        '<colgroup><col style="width:29%"><col style="width:19%"><col style="width:22%"><col style="width:30%"></colgroup>'
+        '<colgroup><col style="width:26%"><col style="width:26%"><col style="width:20%"><col style="width:28%"></colgroup>'
         "<thead><tr>"
         "<th>País</th>"
         "<th>Declaratoria</th>"
