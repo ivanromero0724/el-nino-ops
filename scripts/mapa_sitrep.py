@@ -53,6 +53,7 @@ COLORES_AMENAZA = {
     "arbovirosis": "#008877",
     "respiratorio": "#7851A9",
     "servicios": "#0067B1",
+    "servicios_potencial": "#62B5E5",
 }
 
 ETIQUETAS_AMENAZA = {
@@ -63,6 +64,7 @@ ETIQUETAS_AMENAZA = {
     "arbovirosis": "Dengue / otras arbovirosis",
     "respiratorio": "Calidad del aire / riesgo respiratorio",
     "servicios": "Afectación de servicios de salud",
+    "servicios_potencial": "Impacto potencial de servicios de salud",
 }
 
 MAPEO_ICONOS = {
@@ -73,6 +75,7 @@ MAPEO_ICONOS = {
     "icono_arbovirosis": "arbovirosis",
     "icono_respiratorio": "respiratorio",
     "icono_servicios": "servicios",
+    "icono_servicios_potencial": "servicios_potencial",
 }
 
 # ============================================================
@@ -251,7 +254,12 @@ def icono_servicios(size=27):
     da.add_artist(Rectangle((size*.44,size*.25),size*.12,size*.50,facecolor="white",edgecolor="none")); da.add_artist(Rectangle((size*.25,size*.44),size*.50,size*.12,facecolor="white",edgecolor="none"))
     return da
 
-ICONOS={"agua":icono_agua,"inundaciones":icono_inundaciones,"incendios":icono_incendios,"alimentos":icono_alimentos,"arbovirosis":icono_arbovirosis,"respiratorio":icono_respiratorio,"servicios":icono_servicios}
+def icono_servicios_potencial(size=27):
+    da=base_icono(size,COLORES_AMENAZA["servicios_potencial"])
+    da.add_artist(Rectangle((size*.44,size*.25),size*.12,size*.50,facecolor="white",edgecolor="none")); da.add_artist(Rectangle((size*.25,size*.44),size*.50,size*.12,facecolor="white",edgecolor="none"))
+    return da
+
+ICONOS={"agua":icono_agua,"inundaciones":icono_inundaciones,"incendios":icono_incendios,"alimentos":icono_alimentos,"arbovirosis":icono_arbovirosis,"respiratorio":icono_respiratorio,"servicios":icono_servicios,"servicios_potencial":icono_servicios_potencial}
 
 def poner_iconos(ax,x,y,amenazas,size=27):
     if not amenazas: return
@@ -323,11 +331,12 @@ def main():
         ax_leg.text(.255,yy,texto,fontsize=10,color=TEXTO,va="center",transform=ax_leg.transAxes)
     ax_leg.plot([.1,.9],[.585,.585],color=BORDE_PANEL,linewidth=.8,transform=ax_leg.transAxes)
     ax_leg.text(.105,.545,"Amenaza / impacto sanitario",fontsize=11.6,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
-    orden=["agua","inundaciones","incendios","alimentos","arbovirosis","respiratorio","servicios"]
+    orden=["agua","inundaciones","incendios","alimentos","arbovirosis","respiratorio","servicios","servicios_potencial"]
     for i,a in enumerate(orden):
-        yy=.475-i*.061
+        yy=.475-i*.056
         ax_leg.add_artist(AnnotationBbox(ICONOS[a](27),(.160,yy),xycoords=ax_leg.transAxes,frameon=False,box_alignment=(.5,.5)))
-        ax_leg.text(.255,yy,ETIQUETAS_AMENAZA[a],fontsize=10,color=TEXTO,va="center",transform=ax_leg.transAxes)
+        fs = 9.2 if a == "servicios_potencial" else 10
+        ax_leg.text(.255,yy,ETIQUETAS_AMENAZA[a],fontsize=fs,color=TEXTO,va="center",transform=ax_leg.transAxes)
 
     ax_logo.axis("off")
     if RUTA_LOGO.exists():

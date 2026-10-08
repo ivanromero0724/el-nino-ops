@@ -21,7 +21,7 @@ Repositorio para el monitoreo mensual del fenómeno de El Niño y sus implicacio
 
 La base mantiene una sola tabla. Para cada actualización mensual se agregan nuevas filas y se conservan los SitRep anteriores. La llave temporal es `sitrep_id`; dentro de cada SitRep debe existir una sola fila por `iso3`.
 
-Las variables `icono_agua`, `icono_inundaciones`, `icono_incendios`, `icono_alimentos`, `icono_arbovirosis`, `icono_respiratorio` e `icono_servicios` usan valores 0/1 y alimentan directamente los pictogramas del mapa y las visualizaciones del tablero.
+Las variables `icono_agua`, `icono_inundaciones`, `icono_incendios`, `icono_alimentos`, `icono_arbovirosis`, `icono_respiratorio`, `icono_servicios` e `icono_servicios_potencial` usan valores 0/1 y alimentan directamente los pictogramas del mapa y las visualizaciones del tablero. En servicios de salud, `icono_servicios` representa afectación o presión operacional documentada y `icono_servicios_potencial` identifica impacto potencial sin afectación observada en la síntesis regional.
 
 ## Dashboard
 

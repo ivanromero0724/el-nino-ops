@@ -44,6 +44,7 @@ AMENAZAS = {
     "Dengue / otras arbovirosis": ("icono_arbovirosis", "arbovirosis"),
     "Calidad del aire / riesgo respiratorio": ("icono_respiratorio", "respiratorio"),
     "Afectación de servicios de salud": ("icono_servicios", "servicios"),
+    "Impacto potencial de servicios de salud": ("icono_servicios_potencial", "servicios_potencial"),
 }
 
 AMENAZAS_CORTAS = {
@@ -54,6 +55,7 @@ AMENAZAS_CORTAS = {
     "Dengue / otras arbovirosis": "Arbovirosis",
     "Calidad del aire / riesgo respiratorio": "Aire",
     "Afectación de servicios de salud": "Afectación servicios",
+    "Impacto potencial de servicios de salud": "Impacto potencial servicios",
 }
 
 CIFRAS = {
@@ -661,7 +663,15 @@ def matriz_amenazas(datos, altura=560):
 
     columnas = [v[0] for v in AMENAZAS.values()]
     nombres = list(AMENAZAS.keys())
-    etiquetas = [("Inseguridad<br>alimentaria" if n == "Inseguridad alimentaria" else "Afectación<br>servicios" if n == "Afectación de servicios de salud" else AMENAZAS_CORTAS[n]) for n in nombres]
+    etiquetas = [
+        (
+            "Inseguridad<br>alimentaria" if n == "Inseguridad alimentaria"
+            else "Afectación<br>servicios" if n == "Afectación de servicios de salud"
+            else "Impacto potencial<br>servicios" if n == "Impacto potencial de servicios de salud"
+            else AMENAZAS_CORTAS[n]
+        )
+        for n in nombres
+    ]
     m = datos.set_index("pais")[columnas].copy()
     m = m.loc[m.sum(axis=1).sort_values(ascending=False).index]
 

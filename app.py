@@ -38,6 +38,7 @@ AMENAZAS = {
     "Dengue / otras arbovirosis": ("icono_arbovirosis", "arbovirosis"),
     "Calidad del aire / riesgo respiratorio": ("icono_respiratorio", "respiratorio"),
     "Afectación de servicios de salud": ("icono_servicios", "servicios"),
+    "Impacto potencial de servicios de salud": ("icono_servicios_potencial", "servicios_potencial"),
 }
 
 # Ajustes exclusivos del dashboard interactivo para dar más aire a los callouts.

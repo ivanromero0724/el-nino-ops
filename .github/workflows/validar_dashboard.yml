@@ -62,6 +62,26 @@ jobs:
           print("OK: estructura Folium y hover presentes")
           PY
 
+      - name: Validar base maestra SitRep 2
+        run: |
+          python - <<'PY'
+          import pandas as pd
+
+          df = pd.read_csv("data/base_maestra_elnino.csv")
+          assert "icono_servicios_potencial" in df.columns
+          s2 = df[df["sitrep_id"] == "SITREP_02_2026-10-15"].copy()
+          assert len(s2) == 20, f"SitRep 2 debe tener 20 países y tiene {len(s2)}"
+          assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "PER", "JAM"}
+          assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"BRA", "URY"}
+          assert s2["prioridad"].value_counts().to_dict() == {
+              "Media": 8,
+              "Alta": 5,
+              "Baja": 5,
+              "Sin priorización": 2,
+          }
+          print("OK: SitRep 2 y servicios de salud validados")
+          PY
+
       - name: Smoke test del mapa real
         env:
           OPS_MAP_SMOKE_TEST: "1"
@@ -92,6 +112,7 @@ jobs:
               "icono_arbovirosis": 0,
               "icono_respiratorio": 0,
               "icono_servicios": 0,
+              "icono_servicios_potencial": 0,
           }])
           frame = {
               "geo": geo,
@@ -107,6 +128,7 @@ jobs:
                   "Dengue / otras arbovirosis": "Arbovirosis",
                   "Calidad del aire / riesgo respiratorio": "Aire",
                   "Afectación de servicios de salud": "Afectación servicios",
+                  "Impacto potencial de servicios de salud": "Impacto potencial servicios",
               },
           }
 
@@ -539,6 +561,7 @@ jobs:
               "Dengue / otras arbovirosis",
               "Calidad del aire / riesgo respiratorio",
               "Afectación de servicios de salud",
+              "Impacto potencial de servicios de salud",
           ]
 
           def esperar_app(page, etiqueta):
