@@ -401,10 +401,10 @@ def main():
     ax_leg.text(.105,.562,"Amenaza / impacto sanitario",fontsize=11.6,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
     orden=["agua","inundaciones","incendios","alimentos","arbovirosis","respiratorio","servicios","servicios_potencial"]
     for i,a in enumerate(orden):
-        yy=.500-i*.064
+        yy=.510-i*.062
         ax_leg.add_artist(
             AnnotationBbox(
-                ICONOS[a](25),
+                ICONOS[a](24),
                 (.160,yy),
                 xycoords=ax_leg.transAxes,
                 frameon=False,
