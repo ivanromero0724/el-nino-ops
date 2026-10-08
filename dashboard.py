@@ -517,6 +517,17 @@ def clasificar_nivel_declaratoria(valor):
     return "Nivel no especificado"
 
 
+def alerta_institucional_sin_declaratoria(valor):
+    """Identifica alertas institucionales que no equivalen a una declaratoria formal."""
+    t = texto(valor, "").strip().lower()
+    if not t:
+        return False
+    return (
+        "alerta institucional" in t
+        or ("alerta" in t and "no equivale a declaratoria" in t)
+    )
+
+
 ATRIBUCION_ORDEN = [
     "Confirmada / relacionada",
     "Compatible / contextual",
@@ -908,7 +919,17 @@ def tabla_respuesta_pais_html(datos):
                     + "</div>"
                 )
             else:
-                declaratoria_html = pill(declaratoria, "#EDF2F5", "#60788A")
+                detalle_decl = texto(fila.get("nivel_declaratoria"), "")
+                if alerta_institucional_sin_declaratoria(detalle_decl):
+                    declaratoria_html = (
+                        '<div class="status-pill-group" '
+                        f'title="{html.escape(detalle_decl, quote=True)}">'
+                        + pill(declaratoria, "#EDF2F5", "#60788A")
+                        + pill("Alerta institucional", "#FFF1CC", "#8A5A00")
+                        + "</div>"
+                    )
+                else:
+                    declaratoria_html = pill(declaratoria, "#EDF2F5", "#60788A")
             impacto_html = (
                 pill(impacto, AZUL_SEC, "#FFFFFF")
                 if impacto == "Documentado"
