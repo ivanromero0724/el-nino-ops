@@ -94,26 +94,45 @@ jobs:
 
           geo = gpd.GeoDataFrame(
               {
-                  "COUNTRY": ["Mexico"],
-                  "ISO_CC": ["MEX"],
+                  "COUNTRY": ["Mexico", "Saint Vincent and the Grenadines"],
+                  "ISO_CC": ["MEX", "VCT"],
               },
-              geometry=[Polygon([(-118,14),(-86,14),(-86,33),(-118,33),(-118,14)])],
+              geometry=[
+                  Polygon([(-118,14),(-86,14),(-86,33),(-118,33),(-118,14)]),
+                  Polygon([(-61.35,13.05),(-61.05,13.05),(-61.05,13.35),(-61.35,13.35),(-61.35,13.05)]),
+              ],
               crs="EPSG:4326",
           )
-          actual = pd.DataFrame([{
-              "iso3": "MEX",
-              "pais": "México",
-              "prioridad": "Alta",
-              "situacion_predominante": "Déficit de precipitación e incremento del riesgo de incendios.",
-              "icono_agua": 1,
-              "icono_inundaciones": 0,
-              "icono_incendios": 1,
-              "icono_alimentos": 0,
-              "icono_arbovirosis": 0,
-              "icono_respiratorio": 0,
-              "icono_servicios": 0,
-              "icono_servicios_potencial": 0,
-          }])
+          actual = pd.DataFrame([
+              {
+                  "iso3": "MEX",
+                  "pais": "México",
+                  "prioridad": "Alta",
+                  "situacion_predominante": "Déficit de precipitación e incremento del riesgo de incendios.",
+                  "icono_agua": 1,
+                  "icono_inundaciones": 0,
+                  "icono_incendios": 1,
+                  "icono_alimentos": 0,
+                  "icono_arbovirosis": 0,
+                  "icono_respiratorio": 0,
+                  "icono_servicios": 0,
+                  "icono_servicios_potencial": 0,
+              },
+              {
+                  "iso3": "VCT",
+                  "pais": "San Vicente y las Granadinas",
+                  "prioridad": "Media",
+                  "situacion_predominante": "Lluvias / inundaciones",
+                  "icono_agua": 0,
+                  "icono_inundaciones": 1,
+                  "icono_incendios": 0,
+                  "icono_alimentos": 0,
+                  "icono_arbovirosis": 0,
+                  "icono_respiratorio": 0,
+                  "icono_servicios": 1,
+                  "icono_servicios_potencial": 0,
+              },
+          ])
           frame = {
               "geo": geo,
               "actual": actual,
@@ -143,6 +162,8 @@ jobs:
               "situación fuera del popup": "situacion_popup" not in rendered,
               "vista centrada": "zoom_start=3.0" in __import__("pathlib").Path("app.py").read_text(encoding="utf-8"),
               "callout": "#075594" in rendered,
+              "callout VCT": 'data-iso=\"VCT\"' in rendered,
+              "nombre VCT": "San Vicente y las Granadinas" in rendered,
           }
           fallos = [k for k, ok in checks.items() if not ok]
           if fallos:
