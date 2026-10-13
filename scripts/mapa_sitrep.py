@@ -172,6 +172,7 @@ def cargar_sitrep():
         raise ValueError("Faltan columnas en la base maestra: " + ", ".join(faltan))
 
     base["fecha_corte"] = pd.to_datetime(base["fecha_corte"], errors="coerce")
+    base["fecha_publicacion"] = pd.to_datetime(base["fecha_publicacion"], errors="coerce")
     base["sitrep_numero"] = pd.to_numeric(base["sitrep_numero"], errors="coerce")
 
     if SITREP_ID is None:
