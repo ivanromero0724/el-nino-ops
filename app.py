@@ -55,6 +55,7 @@ CALLOUT_ROUTES_DASHBOARD = {
     # Caribe: separar México, Jamaica, Puerto Rico y Trinidad y Tobago.
     "JAM": [(-75.0, 34.5), (-76.0, 26.0), (-77.3, 18.2)],
     "PRI": [(-58.0, 28.0), (-62.0, 24.0), (-66.4, 18.2)],
+    "VCT": [(-48.0, 10.5), (-54.0, 10.5), (-58.4, 12.4), (-61.2, 13.2)],
     "TTO": [(-49.0, 20.0), (-56.0, 15.5), (-61.2, 10.5)],
 
     # Costa pacífica de Sudamérica: columnas y filas separadas.
