@@ -162,7 +162,6 @@ jobs:
               "situación fuera del popup": "situacion_popup" not in rendered,
               "vista centrada": "zoom_start=3.0" in __import__("pathlib").Path("app.py").read_text(encoding="utf-8"),
               "callout": "#075594" in rendered,
-              "callout VCT": 'data-iso=\"VCT\"' in rendered,
               "nombre VCT": "San Vicente y las Granadinas" in rendered,
           }
           fallos = [k for k, ok in checks.items() if not ok]
@@ -326,6 +325,20 @@ jobs:
               if folium_frame is None:
                   page.screenshot(path="mapa_hover_fallo.png", full_page=True)
                   raise AssertionError("No se encontró el mapa Leaflet interactivo")
+
+              # San Vicente y las Granadinas es demasiado pequeño para depender
+              # únicamente de su polígono. Debe existir un callout visible propio.
+              vct = folium_frame.locator('.ops-callout[data-iso="VCT"]')
+              if vct.count() == 0:
+                  page.screenshot(path="mapa_vct_fallo.png", full_page=True)
+                  raise AssertionError("No se encontró el callout VCT en el DOM del mapa")
+              vct_box = vct.first.bounding_box()
+              if not vct_box or vct_box["width"] <= 20 or vct_box["height"] <= 10:
+                  page.screenshot(path="mapa_vct_fallo.png", full_page=True)
+                  raise AssertionError(f"El callout VCT no es visible: {vct_box}")
+              if "San Vicente y las Granadinas" not in vct.first.inner_text():
+                  page.screenshot(path="mapa_vct_fallo.png", full_page=True)
+                  raise AssertionError("El callout VCT no contiene el nombre esperado")
 
               pais = folium_frame.locator("path.leaflet-interactive").first
               pais.hover(force=True)
@@ -841,6 +854,7 @@ jobs:
           path: |
             mapa_hover_ok.png
             mapa_hover_fallo.png
+            mapa_vct_fallo.png
             mapa_click_fallo.png
             mapa_centrado_fallo.png
             mapa_solapes_fallo.png
