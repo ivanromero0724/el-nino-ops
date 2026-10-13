@@ -99,7 +99,7 @@ LABELS = {
     "URY": (-47.0, -45.0, "Uruguay"),
     "JAM": (-81.5, 29.2, "Jamaica"),
     "PRI": (-68.8, 29.2, "Puerto Rico"),
-    "VCT": (-54.0, 16.0, "San Vicente y las Granadinas"),
+    "VCT": (-54.0, 18.0, "San Vicente y las Granadinas"),
     "TTO": (-54.0, 7.0, "Trinidad y Tobago"),
 }
 
@@ -130,7 +130,7 @@ ROUTES = {
     "URY": [(-48.0, -45.5), (-52.5, -42.0), (-54.5, -36.0), TARGET["URY"]],
     "JAM": [(-76.8, 28.0), (-76.8, 23.0), TARGET["JAM"]],
     "PRI": [(-64.8, 28.0), (-65.4, 23.0), TARGET["PRI"]],
-    "VCT": [(-55.0, 14.8), (-58.0, 14.8), TARGET["VCT"]],
+    "VCT": [(-55.0, 16.8), (-58.0, 16.8), (-59.5, 14.5), TARGET["VCT"]],
     "TTO": [(-55.0, 6.0), (-58.0, 6.0), (-60.0, 8.2), TARGET["TTO"]],
 }
 
@@ -389,7 +389,7 @@ def main():
         tx,ty=TARGET[iso]; ax.scatter([tx],[ty],s=10,color=AZUL_LINEA,zorder=11)
 
     ax.text(-110,-32.8,"O c é a n o\nP a c í f i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
-    ax.text(-42,12,"O c é a n o\nA t l á n t i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
+    ax.text(-41,-2.5,"O c é a n o\nA t l á n t i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
     ax.set_axis_off()
 
     ax_leg.set_xlim(0,1); ax_leg.set_ylim(0,1); ax_leg.axis("off")
