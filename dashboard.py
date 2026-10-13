@@ -2,6 +2,7 @@ from pathlib import Path
 from io import BytesIO
 import base64
 import html
+import re
 
 import numpy as np
 import pandas as pd
@@ -655,7 +656,7 @@ def clasificar_nivel_declaratoria(valor):
     if not t or t in {"no aplica", "sin información", "sin informacion"}:
         return "Nivel no especificado"
 
-    tiene_nacional = "nacional" in t
+    tiene_nacional = bool(re.search(r"\bnacional\b", t))
     terminos_subnacionales = (
         "subnacional", "departament", "municip", "estadual", "provinc",
         "cantonal", "comun", "distrit", "territorial", "local"
