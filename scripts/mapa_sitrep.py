@@ -355,9 +355,11 @@ def main():
     faltan=set(df["iso"])-set(americas["ISO_CC"].dropna().astype(str))
     if faltan: print("⚠️ ISO no encontrados en el GeoPackage:",sorted(faltan))
 
-    fecha=seleccion["fecha_corte"].max().strftime("%Y-%m-%d"); n=int(seleccion["sitrep_numero"].max())
-    salida_pdf=SALIDA_DIR/f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha}.pdf"
-    salida_png=SALIDA_DIR/f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha}.png"
+    fecha_corte=seleccion["fecha_corte"].max().strftime("%Y-%m-%d")
+    fecha_publicacion=seleccion["fecha_publicacion"].max().strftime("%Y-%m-%d")
+    n=int(seleccion["sitrep_numero"].max())
+    salida_pdf=SALIDA_DIR/f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha_publicacion}.pdf"
+    salida_png=SALIDA_DIR/f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha_publicacion}.png"
 
     fig=plt.figure(figsize=(13,8.5),facecolor="white")
     fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))
@@ -454,7 +456,8 @@ def main():
     plt.close(fig)
 
     print(f"SitRep: {sitrep_id}")
-    print(f"Fecha de corte: {fecha}")
+    print(f"Fecha de publicación: {fecha_publicacion}")
+    print(f"Fecha de corte: {fecha_corte}")
     print(f"Países: {len(df)}")
     print(f"PNG: {salida_png.resolve()}")
     print(f"PDF: {salida_pdf.resolve()}")
