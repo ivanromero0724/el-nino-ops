@@ -70,12 +70,12 @@ jobs:
           df = pd.read_csv("data/base_maestra_elnino.csv")
           assert "icono_servicios_potencial" in df.columns
           s2 = df[df["sitrep_id"] == "SITREP_02_2026-10-15"].copy()
-          assert len(s2) == 20, f"SitRep 2 debe tener 20 países y tiene {len(s2)}"
-          assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "PER", "JAM"}
-          assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"BRA", "URY"}
+          assert len(s2) == 21, f"SitRep 2 debe tener 21 países/territorios y tiene {len(s2)}"
+          assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "PER", "JAM", "CHL", "VCT"}
+          assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"BRA", "COL", "URY"}
           assert s2["prioridad"].value_counts().to_dict() == {
               "Media": 8,
-              "Alta": 5,
+              "Alta": 6,
               "Baja": 5,
               "Sin priorización": 2,
           }
