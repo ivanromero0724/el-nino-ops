@@ -55,7 +55,9 @@ CALLOUT_ROUTES_DASHBOARD = {
     # Caribe: separar México, Jamaica, Puerto Rico y Trinidad y Tobago.
     "JAM": [(-75.0, 34.5), (-76.0, 26.0), (-77.3, 18.2)],
     "PRI": [(-58.0, 28.0), (-62.0, 24.0), (-66.4, 18.2)],
-    "VCT": [(-48.0, 10.5), (-54.0, 10.5), (-58.4, 12.4), (-61.2, 13.2)],
+    # País insular pequeño: posición explícita para garantizar su lectura
+    # incluso cuando el polígono apenas es visible al zoom regional.
+    "VCT": [(-49.0, 12.0), (-54.0, 12.0), (-58.5, 12.6), (-61.2, 13.2)],
     "TTO": [(-49.0, 20.0), (-56.0, 15.5), (-61.2, 10.5)],
 
     # Costa pacífica de Sudamérica: columnas y filas separadas.
@@ -304,15 +306,32 @@ def _construir_folium(frame_globals):
     )
 
     # Callouts e iconos seleccionados. Se dibujan encima de los polígonos.
+    # VCT se define también aquí, de forma independiente, porque al zoom regional
+    # su geometría es demasiado pequeña para funcionar como referencia visual.
+    dashboard_especial = {
+        "VCT": {
+            "nombre": "San Vicente y las Granadinas",
+            "target": (-61.2, 13.2),
+            "route": CALLOUT_ROUTES_DASHBOARD["VCT"],
+        }
+    }
+
     for _, fila in filtrado.iterrows():
         iso = str(fila.get("iso3", "")).upper().strip()
-        if iso not in mapa_ref.LABELS or iso not in mapa_ref.ROUTES or iso not in mapa_ref.TARGET:
-            continue
 
-        _, _, nombre_pais = mapa_ref.LABELS[iso]
-        ruta_lonlat = list(CALLOUT_ROUTES_DASHBOARD.get(iso, mapa_ref.ROUTES[iso]))
+        if iso in dashboard_especial:
+            cfg = dashboard_especial[iso]
+            nombre_pais = cfg["nombre"]
+            ruta_lonlat = list(cfg["route"])
+            target_lon, target_lat = cfg["target"]
+        else:
+            if iso not in mapa_ref.LABELS or iso not in mapa_ref.ROUTES or iso not in mapa_ref.TARGET:
+                continue
+            _, _, nombre_pais = mapa_ref.LABELS[iso]
+            ruta_lonlat = list(CALLOUT_ROUTES_DASHBOARD.get(iso, mapa_ref.ROUTES[iso]))
+            target_lon, target_lat = mapa_ref.TARGET[iso]
+
         ruta = [(lat, lon) for lon, lat in ruta_lonlat]
-        target_lon, target_lat = mapa_ref.TARGET[iso]
         activas = _amenazas_activas(fila, seleccion)
 
         # El primer punto de cada ruta ya está diseñado como punto exterior
@@ -339,7 +358,7 @@ def _construir_folium(frame_globals):
 
         folium.CircleMarker(
             location=[target_lat, target_lon],
-            radius=1.35,
+            radius=2.4 if iso == "VCT" else 1.35,
             color="#075594",
             fill=True,
             fill_color="#075594",
