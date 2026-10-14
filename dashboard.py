@@ -63,15 +63,64 @@ CIFRAS = {
     "personas_afectadas": "Personas afectadas",
     "personas_damnificadas": "Personas damnificadas",
     "familias_afectadas": "Familias afectadas",
-    "muertes": "Muertes",
-    "heridos": "Heridos",
-    "personas_inseguridad_alimentaria_min": "Inseguridad alimentaria (mín.)",
-    "personas_inseguridad_alimentaria_max": "Inseguridad alimentaria (máx.)",
-    "personas_emergencia_alimentaria": "Emergencia alimentaria",
-    "establecimientos_salud_afectados": "Establecimientos afectados",
-    "establecimientos_salud_expuestos": "Establecimientos expuestos",
-    "hectareas_incendios": "Hectáreas por incendios",
-    "municipios_afectados": "Municipios afectados",
+    "muertes": "Personas fallecidas",
+    "heridos": "Personas heridas / lesionadas",
+    "personas_inseguridad_alimentaria_min": "Personas en inseguridad alimentaria (mín.)",
+    "personas_inseguridad_alimentaria_max": "Personas en inseguridad alimentaria (máx.)",
+    "personas_emergencia_alimentaria": "Personas en emergencia alimentaria",
+    "establecimientos_salud_afectados": "Establecimientos de salud afectados",
+    "establecimientos_salud_expuestos": "Establecimientos de salud expuestos",
+    "hectareas_incendios": "Hectáreas afectadas por incendios",
+    "municipios_afectados": "Municipios / distritos reportados",
+}
+
+# Algunas variables numéricas de la base son deliberadamente genéricas para
+# conservar una sola estructura longitudinal. En el detalle por país se usan
+# etiquetas más precisas cuando el significado depende del territorio, periodo
+# o tipo de evento documentado en el SitRep.
+ETIQUETAS_CIFRAS_SITREP2 = {
+    "HND": {
+        "personas_inseguridad_alimentaria_min": "Personas con inseguridad alimentaria (estim.)",
+        "personas_inseguridad_alimentaria_max": "Personas con inseguridad alimentaria (proy.)",
+        "municipios_afectados": "Municipios en alerta roja",
+    },
+    "GTM": {
+        "personas_afectadas": "Personas afectadas por lluvias",
+        "muertes": "Personas fallecidas por lluvias",
+        "personas_inseguridad_alimentaria_min": "Personas en Fase 3+ (proy. oct–feb)",
+        "personas_inseguridad_alimentaria_max": "Personas en Fase 3+ (jul–sep)",
+        "personas_emergencia_alimentaria": "Personas en Fase 4 (Emergencia)",
+    },
+    "PAN": {
+        "personas_afectadas": "Personas afectadas por inundaciones",
+    },
+    "PER": {
+        "muertes": "Personas fallecidas por lluvias/huaicos (acum.)",
+        "establecimientos_salud_afectados": "Establecimientos de salud afectados (4-sep)",
+        "establecimientos_salud_expuestos": "Establecimientos de salud expuestos (4-sep)",
+        "hectareas_incendios": "Hectáreas afectadas por incendios (Cusco)",
+        "municipios_afectados": "Distritos por peligro inminente",
+    },
+    "BOL": {
+        "municipios_afectados": "Municipios con sequía severa/extrema",
+    },
+    "ECU": {
+        "personas_afectadas": "Personas afectadas por lluvias (acum.)",
+        "muertes": "Personas fallecidas por lluvias (acum.)",
+        "hectareas_incendios": "Hectáreas de cobertura vegetal perdidas",
+    },
+    "BRA": {
+        "municipios_afectados": "Municipios con PM₂.₅ sobre referencia OMS",
+    },
+    "CHL": {
+        "personas_damnificadas": "Personas damnificadas (antec. julio)",
+        "muertes": "Personas fallecidas (antec. julio)",
+        "heridos": "Personas lesionadas (8-oct)",
+        "establecimientos_salud_afectados": "Establecimientos de salud afectados (8-oct)",
+    },
+    "VCT": {
+        "establecimientos_salud_afectados": "Establecimientos de salud inundados",
+    },
 }
 
 CHART_CONFIG = {
@@ -613,6 +662,15 @@ def texto(valor, fallback="Sin información reportada"):
 
 def texto_html(valor, fallback="Sin información reportada"):
     return html.escape(texto(valor, fallback)).replace("\n", "<br>")
+
+
+def etiqueta_cifra(fila, columna):
+    """Etiqueta una cifra con unidad, periodo y contexto cuando aplica."""
+    etiqueta = CIFRAS[columna]
+    if int(fila.get("sitrep_numero", 0) or 0) == 2:
+        iso = texto(fila.get("iso3"), "").upper()
+        etiqueta = ETIQUETAS_CIFRAS_SITREP2.get(iso, {}).get(columna, etiqueta)
+    return etiqueta
 
 
 def formato_numero(valor):
@@ -2076,9 +2134,11 @@ else:
                 )
 
         cifras_disponibles = []
-        for col, etiqueta in CIFRAS.items():
+        for col in CIFRAS:
             if col in fila.index and pd.notna(fila[col]):
-                cifras_disponibles.append((etiqueta, formato_numero(float(fila[col]))))
+                cifras_disponibles.append(
+                    (etiqueta_cifra(fila, col), formato_numero(float(fila[col])))
+                )
 
         if cifras_disponibles:
             st.markdown("<br>**Cifras reportadas en el SitRep**", unsafe_allow_html=True)
