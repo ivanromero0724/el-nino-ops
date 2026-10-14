@@ -21,6 +21,8 @@ from shapely.geometry import box
 from scripts import mapa_sitrep as mapa_ref
 
 
+APP_BUILD = "2026-10-14-vct-base-refresh"
+
 AZUL_MAR = "#D9EEF7"
 AZUL_OPS = "#004B87"
 COLORES_PRIORIDAD = {
