@@ -380,12 +380,6 @@ st.markdown(
             font-weight:900;
             line-height:1;
         }}
-        .synthesis-note {{
-            color:#728596;
-            font-size:.76rem;
-            line-height:1.45;
-            margin:.15rem 0 .65rem 0;
-        }}
         .synthesis-wrap {{
             width:100%;
             max-height:650px;
@@ -1912,13 +1906,6 @@ vista_sintesis = st.radio(
     label_visibility="collapsed",
 )
 st.markdown(leyenda_sintesis_html(), unsafe_allow_html=True)
-st.markdown(
-    '<div class="synthesis-note">La vista resumida prioriza lectura rápida. '
-    'La vista completa conserva los bloques temáticos del SitRep. '
-    'La simbología se deriva de la base maestra actual; los estados más finos se podrán '
-    'estructurar explícitamente en una siguiente iteración.</div>',
-    unsafe_allow_html=True,
-)
 st.markdown(
     tabla_sintesis_regional_html(filtrado, vista=vista_sintesis),
     unsafe_allow_html=True,
