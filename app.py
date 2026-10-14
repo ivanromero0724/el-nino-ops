@@ -59,7 +59,7 @@ CALLOUT_ROUTES_DASHBOARD = {
     "PRI": [(-58.0, 28.0), (-62.0, 24.0), (-66.4, 18.2)],
     # País insular pequeño: posición explícita para garantizar su lectura
     # incluso cuando el polígono apenas es visible al zoom regional.
-    "VCT": [(-49.0, 12.0), (-54.0, 12.0), (-58.5, 12.6), (-61.2, 13.2)],
+    "VCT": [(-58.5, 15.5), (-60.0, 15.0), (-61.2, 13.2)],
     "TTO": [(-49.0, 20.0), (-56.0, 15.5), (-61.2, 10.5)],
 
     # Costa pacífica de Sudamérica: columnas y filas separadas.
@@ -344,7 +344,12 @@ def _construir_folium(frame_globals):
         callout_a_la_izquierda = callout_lon < target_lon
 
         ancho_por_iconos = len(activas) * 30 + 8
-        ancho_por_nombre = max(90, len(nombre_pais) * 7 + 12)
+        # VCT usa nombre en dos líneas para no salirse del borde derecho del
+        # iframe al zoom regional. El resto mantiene el cálculo habitual.
+        if iso == "VCT":
+            ancho_por_nombre = 132
+        else:
+            ancho_por_nombre = max(90, len(nombre_pais) * 7 + 12)
         ancho_callout = min(230, max(120, ancho_por_iconos, ancho_por_nombre))
         anchor_x = ancho_callout if callout_a_la_izquierda else 0
         alineacion = "right" if callout_a_la_izquierda else "left"
@@ -380,11 +385,17 @@ def _construir_folium(frame_globals):
             f'margin-top:3px;width:{ancho_callout}px;">{imgs}</div>'
             if imgs else ""
         )
+        nombre_html = (
+            "San Vicente y las<br>Granadinas"
+            if iso == "VCT"
+            else html.escape(nombre_pais)
+        )
+        white_space = "normal" if iso == "VCT" else "nowrap"
         label_html = (
             f'<div class="ops-callout" data-iso="{html.escape(iso)}" '
-            f'style="width:{ancho_callout}px;white-space:nowrap;pointer-events:none;'
+            f'style="width:{ancho_callout}px;white-space:{white_space};pointer-events:none;'
             f'font-family:Arial,sans-serif;color:#004B87;text-align:{alineacion};">'
-            f'<div style="font-size:12px;font-weight:700;line-height:1.05;">{html.escape(nombre_pais)}</div>'
+            f'<div style="font-size:12px;font-weight:700;line-height:1.08;">{nombre_html}</div>'
             f'{bloque_iconos}'
             '</div>'
         )
