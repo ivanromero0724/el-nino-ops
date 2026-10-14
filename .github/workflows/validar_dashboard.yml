@@ -336,9 +336,28 @@ jobs:
               if not vct_box or vct_box["width"] <= 20 or vct_box["height"] <= 10:
                   page.screenshot(path="mapa_vct_fallo.png", full_page=True)
                   raise AssertionError(f"El callout VCT no es visible: {vct_box}")
-              if "San Vicente y las Granadinas" not in vct.first.inner_text():
+              if "San Vicente y las" not in vct.first.inner_text() or "Granadinas" not in vct.first.inner_text():
                   page.screenshot(path="mapa_vct_fallo.png", full_page=True)
                   raise AssertionError("El callout VCT no contiene el nombre esperado")
+
+              # Además debe quedar dentro del rectángulo visible de Leaflet:
+              # existir en el DOM no basta si el callout está recortado.
+              vct_rect = vct.first.evaluate("""el => {
+                  const r = el.getBoundingClientRect();
+                  const m = document.querySelector('.leaflet-container').getBoundingClientRect();
+                  return {
+                      left:r.left, right:r.right, top:r.top, bottom:r.bottom,
+                      mapLeft:m.left, mapRight:m.right, mapTop:m.top, mapBottom:m.bottom
+                  };
+              }""")
+              if (
+                  vct_rect["left"] < vct_rect["mapLeft"] - 2
+                  or vct_rect["right"] > vct_rect["mapRight"] + 2
+                  or vct_rect["top"] < vct_rect["mapTop"] - 2
+                  or vct_rect["bottom"] > vct_rect["mapBottom"] + 2
+              ):
+                  page.screenshot(path="mapa_vct_fallo.png", full_page=True)
+                  raise AssertionError(f"El callout VCT queda recortado: {vct_rect}")
 
               pais = folium_frame.locator("path.leaflet-interactive").first
               pais.hover(force=True)
@@ -812,9 +831,26 @@ jobs:
               if not vct_live_box or vct_live_box["width"] <= 20 or vct_live_box["height"] <= 10:
                   page.screenshot(path="mapa_live_vct_fallo.png", full_page=True)
                   raise AssertionError(f"El callout VCT live no es visible: {vct_live_box}")
-              if "San Vicente y las Granadinas" not in vct_live.first.inner_text():
+              if "San Vicente y las" not in vct_live.first.inner_text() or "Granadinas" not in vct_live.first.inner_text():
                   page.screenshot(path="mapa_live_vct_fallo.png", full_page=True)
                   raise AssertionError("El callout VCT live no contiene el nombre esperado")
+
+              vct_live_rect = vct_live.first.evaluate("""el => {
+                  const r = el.getBoundingClientRect();
+                  const m = document.querySelector('.leaflet-container').getBoundingClientRect();
+                  return {
+                      left:r.left, right:r.right, top:r.top, bottom:r.bottom,
+                      mapLeft:m.left, mapRight:m.right, mapTop:m.top, mapBottom:m.bottom
+                  };
+              }""")
+              if (
+                  vct_live_rect["left"] < vct_live_rect["mapLeft"] - 2
+                  or vct_live_rect["right"] > vct_live_rect["mapRight"] + 2
+                  or vct_live_rect["top"] < vct_live_rect["mapTop"] - 2
+                  or vct_live_rect["bottom"] > vct_live_rect["mapBottom"] + 2
+              ):
+                  page.screenshot(path="mapa_live_vct_fallo.png", full_page=True)
+                  raise AssertionError(f"El callout VCT live queda recortado: {vct_live_rect}")
 
               pais = folium_frame.locator("path.leaflet-interactive").first
               pais.hover(force=True)
