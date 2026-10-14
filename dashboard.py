@@ -573,8 +573,13 @@ st.markdown(
 # ============================================================
 # DATOS
 # ============================================================
-@st.cache_data(show_spinner=False)
 def cargar_base():
+    """Carga siempre la base maestra vigente.
+
+    La tabla es pequeña y se actualiza con cada SitRep. No se cachea para
+    evitar que Streamlit Cloud conserve en memoria un corte anterior cuando
+    cambia data/base_maestra_elnino.csv.
+    """
     if not RUTA_BASE.exists():
         raise FileNotFoundError(f"No se encontró {RUTA_BASE}")
 
