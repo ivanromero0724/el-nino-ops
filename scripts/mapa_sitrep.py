@@ -389,7 +389,7 @@ def main():
         tx,ty=TARGET[iso]; ax.scatter([tx],[ty],s=10,color=AZUL_LINEA,zorder=11)
 
     ax.text(-110,-32.8,"O c é a n o\nP a c í f i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
-    ax.text(-41,-2.5,"O c é a n o\nA t l á n t i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
+    ax.text(-39,-34.0,"O c é a n o\nA t l á n t i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
     ax.set_axis_off()
 
     ax_leg.set_xlim(0,1); ax_leg.set_ylim(0,1); ax_leg.axis("off")
