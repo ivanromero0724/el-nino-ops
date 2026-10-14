@@ -59,8 +59,10 @@ CALLOUT_ROUTES_DASHBOARD = {
     "PRI": [(-58.0, 28.0), (-62.0, 24.0), (-66.4, 18.2)],
     # País insular pequeño: posición explícita para garantizar su lectura
     # incluso cuando el polígono apenas es visible al zoom regional.
-    "VCT": [(-58.5, 15.5), (-60.0, 15.0), (-61.2, 13.2)],
-    "TTO": [(-49.0, 20.0), (-56.0, 15.5), (-61.2, 10.5)],
+    # Orden visual Caribe oriental: San Vicente arriba, Trinidad y Tobago abajo.
+    # Los corredores quedan separados para que las líneas no se crucen.
+    "VCT": [(-50.0, 20.5), (-55.5, 20.5), (-59.2, 15.8), (-61.2, 13.2)],
+    "TTO": [(-50.0, 7.5), (-56.0, 7.5), (-59.3, 9.0), (-61.2, 10.5)],
 
     # Costa pacífica de Sudamérica: columnas y filas separadas.
     "COL": [(-94.0, -4.5), (-85.0, -4.5), (-78.5, 0.5), (-74.5, 4.2)],
@@ -68,6 +70,10 @@ CALLOUT_ROUTES_DASHBOARD = {
     "PER": [(-94.0, -24.5), (-86.0, -24.5), (-80.0, -15.0), (-75.5, -9.5)],
     "BOL": [(-82.0, -32.0), (-74.0, -32.0), (-68.0, -22.0), (-64.8, -16.8)],
     "CHL": [(-105.0, -40.5), (-88.0, -40.5), (-77.0, -36.0), (-71.2, -33.5)],
+
+    # Cono Sur: Argentina arriba y Uruguay abajo, usando corredores distintos.
+    "ARG": [(-47.0, -30.5), (-54.0, -30.5), (-59.5, -32.6), (-63.5, -34.5)],
+    "URY": [(-47.0, -43.0), (-50.5, -43.0), (-52.5, -38.0), (-54.3, -34.6), (-56.0, -32.8)],
 }
 
 
