@@ -71,7 +71,7 @@ CALLOUT_ROUTES_DASHBOARD = {
     "BOL": [(-82.0, -32.0), (-74.0, -32.0), (-68.0, -22.0), (-64.8, -16.8)],
     "CHL": [(-105.0, -40.5), (-88.0, -40.5), (-77.0, -36.0), (-71.2, -33.5)],
 
-    # Cono Sur: Argentina arriba y Uruguay abajo, usando corredores distintos.
+    # Cono Sur: Argentina abajo-izquierda de Uruguay, usando corredores distintos.
     "ARG": [(-65.0, -46.0), (-64.5, -42.0), (-64.0, -38.0), (-63.5, -34.5)],
     "URY": [(-47.0, -43.0), (-50.5, -43.0), (-52.5, -38.0), (-54.3, -34.6), (-56.0, -32.8)],
 }
