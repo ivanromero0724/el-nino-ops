@@ -71,8 +71,8 @@ jobs:
           assert "icono_servicios_potencial" in df.columns
           s2 = df[df["sitrep_id"] == "SITREP_02_2026-10-16"].copy()
           assert len(s2) == 21, f"SitRep 2 debe tener 21 países/territorios y tiene {len(s2)}"
-          assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "PER", "BRA", "CHL", "JAM", "VCT"}
-          assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"HND", "PER", "BRA", "COL", "URY", "JAM", "VCT"}
+          assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "COL", "PER", "BRA", "CHL", "ARG", "JAM", "VCT"}
+          assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"HND", "GTM", "SLV", "CRI", "COL", "PER", "BRA", "URY", "PRY", "JAM", "VCT"}
           assert s2["prioridad"].value_counts().to_dict() == {
               "Media": 6,
               "Alta": 6,
@@ -93,9 +93,29 @@ jobs:
           fila_col = s2.loc[s2["iso3"] == "COL"].iloc[0]
           iconos_col = _amenazas_activas(fila_col, list(AMENAZAS.keys()))
           claves_col = [clave for _, clave in iconos_col]
-          assert "servicios_potencial" in claves_col
-          assert "servicios" not in claves_col
-          print("OK: jerarquía cartográfica observado > potencial")
+          assert "servicios" in claves_col
+          assert "servicios_potencial" not in claves_col
+
+          fila_hnd = s2.loc[s2["iso3"] == "HND"].iloc[0]
+          claves_hnd = [clave for _, clave in _amenazas_activas(fila_hnd, list(AMENAZAS.keys()))]
+          assert "servicios" in claves_hnd
+          assert "servicios_potencial" not in claves_hnd
+
+          fila_gtm = s2.loc[s2["iso3"] == "GTM"].iloc[0]
+          claves_gtm = [clave for _, clave in _amenazas_activas(fila_gtm, list(AMENAZAS.keys()))]
+          assert "servicios_potencial" in claves_gtm
+          assert "servicios" not in claves_gtm
+
+          fila_arg = s2.loc[s2["iso3"] == "ARG"].iloc[0]
+          claves_arg = [clave for _, clave in _amenazas_activas(fila_arg, list(AMENAZAS.keys()))]
+          assert "servicios" in claves_arg
+          assert "servicios_potencial" not in claves_arg
+
+          assert fila_col["servicios_observado_simbolo"] == "▲"
+          assert fila_gtm["servicios_potencial_simbolo"] == "◇"
+          assert fila_hnd["servicios_observado_simbolo"] == "●"
+          assert fila_hnd["servicios_potencial_simbolo"] == "○"
+          print("OK: jerarquía cartográfica por columna y símbolos exactos de Tabla 1")
 
           from scripts import mapa_sitrep
           assert "ARG" in mapa_sitrep.LABELS, "Argentina debe estar activa en LABELS"
@@ -151,7 +171,7 @@ jobs:
                   "icono_arbovirosis": 0,
                   "icono_respiratorio": 0,
                   "icono_servicios": 1,
-                  "icono_servicios_potencial": 0,
+                  "icono_servicios_potencial": 1,
               },
           ])
           frame = {
