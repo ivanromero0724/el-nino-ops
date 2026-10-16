@@ -1,3 +1,4 @@
+# Generación del mapa estático del SitRep con jerarquía cartográfica de servicios.
 from pathlib import Path
 import math
 
