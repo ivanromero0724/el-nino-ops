@@ -96,7 +96,7 @@ LABELS = {
     "CHL": (-113.0, -37.0, "Chile"),
     # Argentina se ubica abajo y a la izquierda de Uruguay para mantener
     # libre el rótulo del Océano Atlántico y evitar recortes.
-    "ARG": (-65.0, -46.0, "Argentina"),
+    "ARG": (-56.5, -49.0, "Argentina"),
     "PRY": (-47.0, -24.5, "Paraguay"),
     "URY": (-47.0, -43.0, "Uruguay"),
     "JAM": (-81.5, 29.2, "Jamaica"),
@@ -127,7 +127,7 @@ ROUTES = {
     "BOL": [(-78.0, -28.8), (-71.5, -28.8), (-67.5, -21.5), TARGET["BOL"]],
     "BRA": [(-45.0, -8.1), (-48.5, -8.1), TARGET["BRA"]],
     "CHL": [(-100.0, -39.5), (-84.0, -39.5), (-75.0, -35.5), TARGET["CHL"]],
-    "ARG": [(-64.5, -44.8), (-64.0, -41.0), (-63.7, -37.5), TARGET["ARG"]],
+    "ARG": [(-56.0, -47.8), (-58.0, -43.5), (-60.8, -38.0), TARGET["ARG"]],
     "PRY": [(-48.0, -25.0), (-53.0, -25.0), TARGET["PRY"]],
     "URY": [(-48.0, -43.3), (-50.5, -43.3), (-52.5, -38.0), (-54.3, -34.6), TARGET["URY"]],
     "JAM": [(-76.8, 28.0), (-76.8, 23.0), TARGET["JAM"]],
