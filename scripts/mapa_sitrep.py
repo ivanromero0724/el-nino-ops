@@ -119,7 +119,8 @@ TARGET = {
 ROUTES = {
     # Línea recta vertical desde México hacia el bloque ubicado en EE. UU.
     "MEX": [(-102.0, 30.0), TARGET["MEX"]],
-    # Guatemala se mantiene por debajo de la ruta de México.\n    "GTM": [(-108.0, 23.8), (-101.0, 22.2), (-95.0, 18.7), TARGET["GTM"]],
+    # Guatemala se mantiene por debajo de la ruta de México.
+    "GTM": [(-108.0, 23.8), (-101.0, 22.2), (-95.0, 18.7), TARGET["GTM"]],
     "HND": [(-108.0, 18.2), (-99.0, 17.5), (-93.0, 16.0), TARGET["HND"]],
     "SLV": [(-108.0, 10.6), (-99.0, 10.8), (-94.0, 12.4), TARGET["SLV"]],
     "CRI": [(-108.0, 3.0), (-99.0, 3.8), (-93.0, 5.5), (-88.0, 7.8), TARGET["CRI"]],
