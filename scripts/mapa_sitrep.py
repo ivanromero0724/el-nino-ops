@@ -202,7 +202,18 @@ def cargar_sitrep():
         raise ValueError("Hay prioridades no reconocidas en la base maestra")
 
     def amenazas(fila):
-        return [clave for col, clave in MAPEO_ICONOS.items() if fila[col] == 1]
+        """Aplica jerarquía cartográfica en servicios: observado > potencial."""
+        salida = []
+        servicio_observado = int(fila.get("icono_servicios", 0)) == 1
+
+        for col, clave in MAPEO_ICONOS.items():
+            if fila[col] != 1:
+                continue
+            if clave == "servicios_potencial" and servicio_observado:
+                continue
+            salida.append(clave)
+
+        return salida
 
     df = pd.DataFrame({
         "pais": s["pais"].astype(str),
