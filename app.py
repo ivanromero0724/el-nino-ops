@@ -124,11 +124,36 @@ def _icono_data_uri(clave, size=64):
 
 
 def _amenazas_activas(fila, seleccion):
+    """Devuelve la simbología activa aplicando jerarquía en servicios de salud.
+
+    Si un país tiene simultáneamente afectación observada e impacto potencial
+    sobre servicios de salud, el mapa representa únicamente la afectación
+    observada, porque describe el estado actualmente documentado. La base
+    conserva ambos indicadores para la Tabla 1 y los análisis.
+    """
     salida = []
+    servicio_observado = (
+        "icono_servicios" in fila.index
+        and pd.notna(fila.get("icono_servicios"))
+        and int(fila.get("icono_servicios")) == 1
+    )
+
     for nombre in seleccion:
         col, clave = AMENAZAS[nombre]
-        if col in fila.index and pd.notna(fila[col]) and int(fila[col]) == 1:
-            salida.append((nombre, clave))
+        if col not in fila.index or pd.isna(fila[col]) or int(fila[col]) != 1:
+            continue
+
+        # Jerarquía cartográfica: observado > potencial.
+        if clave == "servicios_potencial" and servicio_observado:
+            if not any(k == "servicios" for _, k in salida):
+                salida.append(("Afectación de servicios de salud", "servicios"))
+            continue
+
+        if clave == "servicios" and any(k == "servicios" for _, k in salida):
+            continue
+
+        salida.append((nombre, clave))
+
     return salida
 
 
