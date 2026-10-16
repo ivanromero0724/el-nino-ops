@@ -83,7 +83,8 @@ MAPEO_ICONOS = {
 # POSICIONES DEL MAPA / CALLOUTS
 # ============================================================
 LABELS = {
-    "MEX": (-96.5, 28.5, "México"),
+    # México se coloca en el área gris de EE. UU. para separarlo de Guatemala.
+    "MEX": (-107.0, 36.0, "México"),
     "GTM": (-121.0, 29.0, "Guatemala"),
     "HND": (-121.0, 21.3, "Honduras"),
     "SLV": (-121.0, 13.7, "El Salvador"),
@@ -116,7 +117,8 @@ TARGET = {
 }
 
 ROUTES = {
-    # México entra por un corredor superior para separarlo de Guatemala.\n    "MEX": [(-90.0, 27.0), (-95.0, 26.6), (-99.5, 24.8), TARGET["MEX"]],
+    # Línea recta vertical desde México hacia el bloque ubicado en EE. UU.
+    "MEX": [(-102.0, 30.0), TARGET["MEX"]],
     # Guatemala se mantiene por debajo de la ruta de México.\n    "GTM": [(-108.0, 23.8), (-101.0, 22.2), (-95.0, 18.7), TARGET["GTM"]],
     "HND": [(-108.0, 18.2), (-99.0, 17.5), (-93.0, 16.0), TARGET["HND"]],
     "SLV": [(-108.0, 10.6), (-99.0, 10.8), (-94.0, 12.4), TARGET["SLV"]],
