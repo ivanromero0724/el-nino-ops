@@ -69,17 +69,33 @@ jobs:
 
           df = pd.read_csv("data/base_maestra_elnino.csv")
           assert "icono_servicios_potencial" in df.columns
-          s2 = df[df["sitrep_id"] == "SITREP_02_2026-10-15"].copy()
+          s2 = df[df["sitrep_id"] == "SITREP_02_2026-10-16"].copy()
           assert len(s2) == 21, f"SitRep 2 debe tener 21 países/territorios y tiene {len(s2)}"
-          assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "PER", "JAM", "CHL", "VCT"}
+          assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "PER", "BRA", "CHL", "JAM", "VCT"}
           assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"BRA", "COL", "URY"}
           assert s2["prioridad"].value_counts().to_dict() == {
-              "Media": 8,
+              "Media": 6,
               "Alta": 6,
-              "Baja": 5,
+              "Baja": 7,
               "Sin priorización": 2,
           }
           print("OK: SitRep 2 y servicios de salud validados")
+
+          # Jerarquía visual de servicios de salud:
+          # si hay observado + potencial, el mapa debe mostrar solo observado.
+          from app import _amenazas_activas, AMENAZAS
+          fila_bra = s2.loc[s2["iso3"] == "BRA"].iloc[0]
+          iconos_bra = _amenazas_activas(fila_bra, list(AMENAZAS.keys()))
+          claves_bra = [clave for _, clave in iconos_bra]
+          assert "servicios" in claves_bra
+          assert "servicios_potencial" not in claves_bra
+
+          fila_col = s2.loc[s2["iso3"] == "COL"].iloc[0]
+          iconos_col = _amenazas_activas(fila_col, list(AMENAZAS.keys()))
+          claves_col = [clave for _, clave in iconos_col]
+          assert "servicios_potencial" in claves_col
+          assert "servicios" not in claves_col
+          print("OK: jerarquía cartográfica observado > potencial")
           PY
 
       - name: Smoke test del mapa real
