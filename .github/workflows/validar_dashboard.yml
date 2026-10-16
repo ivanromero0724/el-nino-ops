@@ -72,7 +72,7 @@ jobs:
           s2 = df[df["sitrep_id"] == "SITREP_02_2026-10-16"].copy()
           assert len(s2) == 21, f"SitRep 2 debe tener 21 países/territorios y tiene {len(s2)}"
           assert set(s2.loc[s2["icono_servicios"] == 1, "iso3"]) == {"HND", "PER", "BRA", "CHL", "JAM", "VCT"}
-          assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"BRA", "COL", "URY"}
+          assert set(s2.loc[s2["icono_servicios_potencial"] == 1, "iso3"]) == {"HND", "PER", "BRA", "COL", "URY", "JAM", "VCT"}
           assert s2["prioridad"].value_counts().to_dict() == {
               "Media": 6,
               "Alta": 6,
@@ -96,6 +96,11 @@ jobs:
           assert "servicios_potencial" in claves_col
           assert "servicios" not in claves_col
           print("OK: jerarquía cartográfica observado > potencial")
+
+          from scripts import mapa_sitrep
+          assert "ARG" in mapa_sitrep.LABELS, "Argentina debe estar activa en LABELS"
+          assert "ARG" in mapa_sitrep.ROUTES, "Argentina debe tener ruta de callout"
+          print("OK: Argentina presente en configuración de mapas")
           PY
 
       - name: Smoke test del mapa real
