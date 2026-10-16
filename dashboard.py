@@ -1196,12 +1196,11 @@ def _estado_indicador(fila, columna, dominio="amenaza"):
         return ""
 
     if dominio == "servicio_potencial":
-        # Este campo representa impacto/riesgo potencial documentado (○).
-        # Las medidas de preparación sin afectación demostrada (◇) no se
-        # convierten en icono de impacto potencial en el mapa.
-        return "○"
+        simbolo = texto(fila.get("servicios_potencial_simbolo"), "")
+        return simbolo if simbolo in {"●", "○", "▲", "◇"} else "○"
     if dominio == "servicio":
-        return "●"
+        simbolo = texto(fila.get("servicios_observado_simbolo"), "")
+        return simbolo if simbolo in {"●", "○", "▲", "◇"} else "●"
 
     campos = (
         ["amenazas_resumen", "situacion_predominante", "observaciones"]
@@ -1921,7 +1920,13 @@ with col_mapa:
 with col_resumen:
     filas_amenazas = []
     for nombre, (col, icono) in AMENAZAS.items():
-        n = int(filtrado[col].sum()) if col in filtrado.columns else 0
+        if col == "icono_servicios_potencial" and {
+            "icono_servicios_potencial", "icono_servicios"
+        }.issubset(filtrado.columns):
+            # El mapa no duplica servicios: observado tiene prioridad visual.
+            n = int(((filtrado["icono_servicios_potencial"] == 1) & (filtrado["icono_servicios"] != 1)).sum())
+        else:
+            n = int(filtrado[col].sum()) if col in filtrado.columns else 0
         filas_amenazas.append(
             f'<div class="legend-row">'
             f'<div class="legend-label">{amenaza_icon_html(nombre, size=22)}<span>{html.escape(nombre)}</span></div>'
