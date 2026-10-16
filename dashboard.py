@@ -1196,7 +1196,10 @@ def _estado_indicador(fila, columna, dominio="amenaza"):
         return ""
 
     if dominio == "servicio_potencial":
-        return "◇"
+        # Este campo representa impacto/riesgo potencial documentado (○).
+        # Las medidas de preparación sin afectación demostrada (◇) no se
+        # convierten en icono de impacto potencial en el mapa.
+        return "○"
     if dominio == "servicio":
         return "●"
 
