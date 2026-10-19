@@ -131,7 +131,9 @@ CHART_CONFIG = {
 
 st.set_page_config(
     page_title="El Niño y salud pública | OPS/OMS",
-    page_icon=str(RUTA_LOGO),
+    # Evitar el servidor de archivos multimedia de Community Cloud para el
+    # favicon. El logo OPS visible se mantiene embebido como data URI.
+    page_icon="🌎",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
