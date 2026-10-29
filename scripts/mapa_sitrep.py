@@ -487,20 +487,37 @@ def main(idioma="es"):
     if not ruta_logo.is_file():
         raise FileNotFoundError(f"Falta el logo para el mapa en {idioma}: {ruta_logo}")
     logo = np.asarray(recortar_logo(ruta_logo))
-    # Escala equivalente del logo inglés (960 px) al original español.
-    zoom_logo = .58 if idioma == "en" else .47
-    ax_logo.add_artist(
-        AnnotationBbox(
-            OffsetImage(logo, zoom=zoom_logo),
-            (.5, .48),
-            xycoords=ax_logo.transAxes,
-            frameon=False,
-            box_alignment=(.5, .5),
+    if idioma == "en":
+        # Ajustar el logo al panel inferior derecho, no a un zoom fijo.
+        # OffsetImage con dpi_cor=False usa píxeles reales del lienzo:
+        # evita que un logo grande tape el mapa o la leyenda.
+        ancho_panel_px = ax_logo.get_position().width * fig.get_figwidth() * fig.dpi
+        alto_panel_px = ax_logo.get_position().height * fig.get_figheight() * fig.dpi
+        zoom_logo = min(
+            ancho_panel_px * 0.88 / logo.shape[1],
+            alto_panel_px * 0.82 / logo.shape[0],
         )
+    else:
+        zoom_logo = .47  # Mantener el tamaño original en español.
+
+    artista_logo = AnnotationBbox(
+        OffsetImage(logo, zoom=zoom_logo, dpi_cor=(idioma != "en")),
+        (.5, .48),
+        xycoords=ax_logo.transAxes,
+        frameon=False,
+        box_alignment=(.5, .5),
     )
+    ax_logo.add_artist(artista_logo)
 
     # Exportar los dos productos canónicos del SitRep.
     fig.canvas.draw()
+    if idioma == "en":
+        # Evitar regresiones cuando se actualice la resolución del logo.
+        bbox_logo = artista_logo.get_window_extent(fig.canvas.get_renderer())
+        bbox_panel = ax_logo.get_window_extent(fig.canvas.get_renderer())
+        if (bbox_logo.x0 < bbox_panel.x0 - 1 or bbox_logo.x1 > bbox_panel.x1 + 1
+                or bbox_logo.y0 < bbox_panel.y0 - 1 or bbox_logo.y1 > bbox_panel.y1 + 1):
+            raise ValueError("El logo inglés sobresale del panel asignado.")
 
     salida_png.unlink(missing_ok=True)
     fig.savefig(
