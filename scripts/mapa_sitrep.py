@@ -27,6 +27,7 @@ SALIDA_DIR.mkdir(parents=True, exist_ok=True)
 SITREP_ID = None
 
 RUTA_LOGO = BASE / "assets" / "ops_oms.png"
+RUTA_LOGO_EN = BASE / "assets" / "PAHO_eng.png"
 
 # ============================================================
 # ESTILO OPS
@@ -482,9 +483,21 @@ def main(idioma="es"):
         )
 
     ax_logo.axis("off")
-    if RUTA_LOGO.exists():
-        logo=np.asarray(recortar_logo(RUTA_LOGO))
-        ax_logo.add_artist(AnnotationBbox(OffsetImage(logo,zoom=.47),(.5,.48),xycoords=ax_logo.transAxes,frameon=False,box_alignment=(.5,.5)))
+    ruta_logo = RUTA_LOGO_EN if idioma == "en" else RUTA_LOGO
+    if not ruta_logo.is_file():
+        raise FileNotFoundError(f"Falta el logo para el mapa en {idioma}: {ruta_logo}")
+    logo = np.asarray(recortar_logo(ruta_logo))
+    # Escala equivalente del logo inglés (960 px) al original español.
+    zoom_logo = .58 if idioma == "en" else .47
+    ax_logo.add_artist(
+        AnnotationBbox(
+            OffsetImage(logo, zoom=zoom_logo),
+            (.5, .48),
+            xycoords=ax_logo.transAxes,
+            frameon=False,
+            box_alignment=(.5, .5),
+        )
+    )
 
     # Exportar los dos productos canónicos del SitRep.
     fig.canvas.draw()

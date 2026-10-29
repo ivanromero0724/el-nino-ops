@@ -10,7 +10,8 @@ Repositorio para el monitoreo mensual del fenómeno de El Niño y sus implicacio
 - `data/geografia/paises_americas.gpkg`: geografía regional usada por el tablero y el mapa estático.
 - `scripts/preparar_geografia.py`: reconstruye el GeoPackage a partir de Natural Earth 1:50m.
 - `scripts/mapa_sitrep.py`: genera el mapa SitRep en PDF y PNG, en español e inglés.
-- `assets/ops_oms.png`: logo institucional usado por los productos.
+- `assets/ops_oms.png`: logo OPS/OMS utilizado por el mapa estático en español.
+- `assets/PAHO_eng.png`: logo PAHO/WHO en inglés usado por los mapas PDF y PNG en inglés (imagen institucional publicada en UN Road Safety Fund).
 - `outputs/mapas/`: productos estáticos generados.
 - `.github/workflows/validar_dashboard.yml`: única validación automática del tablero.
 - `.github/workflows/generar_mapa.yml`: genera y versiona los productos estáticos.

@@ -8,6 +8,7 @@ on:
       - "data/geografia/paises_americas.gpkg"
       - "scripts/mapa_sitrep.py"
       - "assets/ops_oms.png"
+      - "assets/PAHO_eng.png"
       - "requirements.txt"
       - ".github/workflows/generar_mapa.yml"
 
@@ -35,6 +36,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      # Descargar y versionar el logo institucional inglés solo cuando aún
+      # no exista en el repositorio. Una vez guardado, no depende de la URL.
+      - name: Preparar logo PAHO inglés
+        run: |
+          if [ ! -s assets/PAHO_eng.png ]; then
+            curl --fail --location --retry 3 --retry-all-errors \
+              --connect-timeout 20 --max-time 120 \
+              "https://roadsafetyfund.un.org/sites/default/files/images/partnerlogos/2024-09/pahobrand-blue-stacked-2024-en.png" \
+              --output assets/PAHO_eng.png
+          fi
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+          path = Path("assets/PAHO_eng.png")
+          with Image.open(path) as logo:
+              assert logo.format == "PNG", "Logo inglés no es PNG"
+              assert logo.width >= 500 and logo.height >= 200, "Logo inglés demasiado pequeño"
+              logo.verify()
+          print("Logo PAHO inglés válido:", path.stat().st_size, "bytes")
+          PY
 
       - name: Generar mapas en español e inglés
         run: |
@@ -79,7 +101,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add outputs/mapas/
+          git add outputs/mapas/ assets/PAHO_eng.png
           if git diff --cached --quiet; then
             echo "No hay cambios para guardar."
             exit 0
