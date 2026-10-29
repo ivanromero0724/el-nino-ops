@@ -488,20 +488,26 @@ def main(idioma="es"):
         raise FileNotFoundError(f"Falta el logo para el mapa en {idioma}: {ruta_logo}")
     logo = np.asarray(recortar_logo(ruta_logo))
     if idioma == "en":
-        # Ajustar el logo al panel inferior derecho, no a un zoom fijo.
-        # OffsetImage con dpi_cor=False usa píxeles reales del lienzo:
-        # evita que un logo grande tape el mapa o la leyenda.
-        ancho_panel_px = ax_logo.get_position().width * fig.get_figwidth() * fig.dpi
-        alto_panel_px = ax_logo.get_position().height * fig.get_figheight() * fig.dpi
+        # El tamaño se calcula respecto al logo español para que ambos mapas
+        # mantengan la misma escala visual, independientemente de la resolución
+        # del PNG de PAHO (que es mucho mayor).
+        logo_es = np.asarray(recortar_logo(RUTA_LOGO))
+        zoom_logo = .47 * (logo_es.shape[1] / logo.shape[1]) * .85
+
+        # Límite adicional deliberadamente compacto: máximo 48 % del ancho
+        # y 65 % del alto del panel inferior derecho.
+        factor_dpi = fig.dpi / 72
+        panel = ax_logo.get_window_extent()
         zoom_logo = min(
-            ancho_panel_px * 0.88 / logo.shape[1],
-            alto_panel_px * 0.82 / logo.shape[0],
+            zoom_logo,
+            panel.width * .48 / (logo.shape[1] * factor_dpi),
+            panel.height * .65 / (logo.shape[0] * factor_dpi),
         )
     else:
-        zoom_logo = .47  # Mantener el tamaño original en español.
+        zoom_logo = .47  # Mantener exactamente el tamaño original en español.
 
     artista_logo = AnnotationBbox(
-        OffsetImage(logo, zoom=zoom_logo, dpi_cor=(idioma != "en")),
+        OffsetImage(logo, zoom=zoom_logo, dpi_cor=True),
         (.5, .48),
         xycoords=ax_logo.transAxes,
         frameon=False,
@@ -512,12 +518,17 @@ def main(idioma="es"):
     # Exportar los dos productos canónicos del SitRep.
     fig.canvas.draw()
     if idioma == "en":
-        # Evitar regresiones cuando se actualice la resolución del logo.
+        # No basta con evitar desbordes: comprobar que el logo sea realmente
+        # pequeño respecto al espacio disponible, tanto en PDF como en PNG.
         bbox_logo = artista_logo.get_window_extent(fig.canvas.get_renderer())
         bbox_panel = ax_logo.get_window_extent(fig.canvas.get_renderer())
         if (bbox_logo.x0 < bbox_panel.x0 - 1 or bbox_logo.x1 > bbox_panel.x1 + 1
-                or bbox_logo.y0 < bbox_panel.y0 - 1 or bbox_logo.y1 > bbox_panel.y1 + 1):
-            raise ValueError("El logo inglés sobresale del panel asignado.")
+                or bbox_logo.y0 < bbox_panel.y0 - 1 or bbox_logo.y1 > bbox_panel.y1 + 1
+                or bbox_logo.width > bbox_panel.width * .49
+                or bbox_logo.height > bbox_panel.height * .66):
+            raise ValueError("El logo inglés no tiene el tamaño compacto esperado.")
+        print(f"Logo PAHO inglés: {bbox_logo.width:.1f} x {bbox_logo.height:.1f} px "
+              f"(panel: {bbox_panel.width:.1f} x {bbox_panel.height:.1f} px)")
 
     salida_png.unlink(missing_ok=True)
     fig.savefig(
