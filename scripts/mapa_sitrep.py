@@ -1,5 +1,6 @@
 # Generación del mapa estático del SitRep con jerarquía cartográfica de servicios.
 from pathlib import Path
+import argparse
 import math
 
 import numpy as np
@@ -68,6 +69,18 @@ ETIQUETAS_AMENAZA = {
     "servicios_potencial": "Impacto potencial de servicios de salud",
 }
 
+# Traducciones de las etiquetas visibles; las claves de la base no cambian.
+ETIQUETAS_AMENAZA_EN = {
+    "agua": "Drought / water",
+    "inundaciones": "Flooding / heavy rainfall",
+    "incendios": "Wildfires / burning",
+    "alimentos": "Food insecurity",
+    "arbovirosis": "Dengue / other arboviruses",
+    "respiratorio": "Air quality / respiratory risk",
+    "servicios": "Health services affected",
+    "servicios_potencial": "Potential impact on health services",
+}
+
 MAPEO_ICONOS = {
     "icono_agua": "agua",
     "icono_inundaciones": "inundaciones",
@@ -105,6 +118,16 @@ LABELS = {
     "PRI": (-68.8, 29.2, "Puerto Rico"),
     "VCT": (-54.0, 18.0, "San Vicente y las Granadinas"),
     "TTO": (-54.0, 7.0, "Trinidad y Tobago"),
+}
+
+# Solo nombres de países con traducción distinta al inglés.
+NOMBRES_PAISES_EN = {
+    "MEX": "Mexico",
+    "PAN": "Panama",
+    "PER": "Peru",
+    "BRA": "Brazil",
+    "VCT": "St. Vincent and the Grenadines",
+    "TTO": "Trinidad and Tobago",
 }
 
 TARGET = {
@@ -359,7 +382,10 @@ def recortar_logo(ruta):
 # ============================================================
 # MAPA
 # ============================================================
-def main():
+def main(idioma="es"):
+    if idioma not in ("es", "en"):
+        raise ValueError("El idioma debe ser 'es' o 'en'.")
+
     seleccion, df, sitrep_id = cargar_sitrep()
     if not RUTA_GPKG.exists(): raise FileNotFoundError(f"No se encontró el GeoPackage: {RUTA_GPKG}")
     try: mundo=gpd.read_file(RUTA_GPKG,engine="pyogrio")
@@ -378,8 +404,11 @@ def main():
     fecha_corte=seleccion["fecha_corte"].max().strftime("%Y-%m-%d")
     fecha_publicacion=seleccion["fecha_publicacion"].max().strftime("%Y-%m-%d")
     n=int(seleccion["sitrep_numero"].max())
-    salida_pdf=SALIDA_DIR/f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha_publicacion}.pdf"
-    salida_png=SALIDA_DIR/f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha_publicacion}.png"
+    # Conservar el nombre original del español y añadir _EN para inglés.
+    sufijo_idioma = "_EN" if idioma == "en" else ""
+    nombre_archivo = f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{n:02d}_{fecha_publicacion}{sufijo_idioma}"
+    salida_pdf = SALIDA_DIR / f"{nombre_archivo}.pdf"
+    salida_png = SALIDA_DIR / f"{nombre_archivo}.png"
 
     fig=plt.figure(figsize=(13,8.5),facecolor="white")
     fig.add_artist(Rectangle((.020,0),.620,1.0,transform=fig.transFigure,facecolor=AZUL_MAR,edgecolor="none",zorder=-10,clip_on=False))
@@ -392,7 +421,8 @@ def main():
         if not sub.empty: sub.plot(ax=ax,color=color,edgecolor=BLANCO,linewidth=.88,zorder=3)
 
     for iso,(x,y,nombre) in LABELS.items():
-        ax.text(x,y,nombre,fontsize=8.6,fontweight="bold",color=TEXTO,ha="left",va="center",zorder=30)
+        nombre_mapa = NOMBRES_PAISES_EN.get(iso, nombre) if idioma == "en" else nombre
+        ax.text(x,y,nombre_mapa,fontsize=8.6,fontweight="bold",color=TEXTO,ha="left",va="center",zorder=30)
         poner_iconos(
             ax,
             x + .15 + DESPLAZAMIENTO_ICONOS_X.get(iso, 0),
@@ -405,14 +435,21 @@ def main():
         ax.plot([p[0] for p in ruta],[p[1] for p in ruta],color=AZUL_LINEA,linewidth=.70,solid_capstyle="round",solid_joinstyle="round",zorder=10)
         tx,ty=TARGET[iso]; ax.scatter([tx],[ty],s=10,color=AZUL_LINEA,zorder=11)
 
-    ax.text(-110,-32.8,"O c é a n o\nP a c í f i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
-    ax.text(-39,-34.0,"O c é a n o\nA t l á n t i c o",fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
+    oceano_pacifico = "P a c i f i c\nO c e a n" if idioma == "en" else "O c é a n o\nP a c í f i c o"
+    oceano_atlantico = "A t l a n t i c\nO c e a n" if idioma == "en" else "O c é a n o\nA t l á n t i c o"
+    ax.text(-110,-32.8,oceano_pacifico,fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
+    ax.text(-39,-34.0,oceano_atlantico,fontsize=8,fontstyle="italic",color=AZUL_OCEANO,ha="center")
     ax.set_axis_off()
 
     ax_leg.set_xlim(0,1); ax_leg.set_ylim(0,1); ax_leg.axis("off")
     ax_leg.add_patch(FancyBboxPatch((.045,.025),.910,.950,boxstyle="round,pad=.012,rounding_size=.035",transform=ax_leg.transAxes,facecolor="#F8FCFE",edgecolor=BORDE_PANEL,linewidth=1))
-    ax_leg.text(.105,.925,"Nivel de prioridad",fontsize=13.5,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
-    prioridades=[("#D71920","Alta"),("#FF8618","Media"),("#F6C344","Baja"),(GRIS_LEYENDA,"Sin priorización")]
+    ax_leg.text(.105,.925,"Priority level" if idioma == "en" else "Nivel de prioridad",fontsize=13.5,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
+    prioridades=[
+        ("#D71920", "High" if idioma == "en" else "Alta"),
+        ("#FF8618", "Medium" if idioma == "en" else "Media"),
+        ("#F6C344", "Low" if idioma == "en" else "Baja"),
+        (GRIS_LEYENDA, "Not prioritized" if idioma == "en" else "Sin priorización"),
+    ]
     for i,(color,texto) in enumerate(prioridades):
         yy=.840-i*.060
         ax_leg.scatter([.160],[yy],s=290,color=color,edgecolor="white",linewidth=.6,transform=ax_leg.transAxes,zorder=5)
@@ -420,7 +457,7 @@ def main():
     # Se abre un poco más el bloque de amenazas para evitar que los
     # pictogramas y sus etiquetas queden visualmente amontonados en PNG/PDF.
     ax_leg.plot([.1,.9],[.602,.602],color=BORDE_PANEL,linewidth=.8,transform=ax_leg.transAxes)
-    ax_leg.text(.105,.562,"Amenaza / impacto sanitario",fontsize=11.6,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
+    ax_leg.text(.105,.562,"Hazard / health impact" if idioma == "en" else "Amenaza / impacto sanitario",fontsize=11.6,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes)
     orden=["agua","inundaciones","incendios","alimentos","arbovirosis","respiratorio","servicios","servicios_potencial"]
     for i,a in enumerate(orden):
         yy=.510-i*.062
@@ -437,7 +474,7 @@ def main():
         ax_leg.text(
             .255,
             yy,
-            ETIQUETAS_AMENAZA[a],
+            ETIQUETAS_AMENAZA_EN[a] if idioma == "en" else ETIQUETAS_AMENAZA[a],
             fontsize=fs,
             color=TEXTO,
             va="center",
@@ -475,6 +512,7 @@ def main():
     )
     plt.close(fig)
 
+    print(f"Idioma: {idioma}")
     print(f"SitRep: {sitrep_id}")
     print(f"Fecha de publicación: {fecha_publicacion}")
     print(f"Fecha de corte: {fecha_corte}")
@@ -483,4 +521,6 @@ def main():
     print(f"PDF: {salida_pdf.resolve()}")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Generar mapa estático SitRep (PDF y PNG).")
+    parser.add_argument("--lang", choices=("es", "en"), default="es", help="Idioma del mapa.")
+    main(parser.parse_args().lang)

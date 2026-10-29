@@ -36,25 +36,43 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Generar mapa
-        run: python scripts/mapa_sitrep.py
+      - name: Generar mapas en español e inglés
+        run: |
+          python scripts/mapa_sitrep.py --lang es
+          python scripts/mapa_sitrep.py --lang en
 
-      - name: Validar productos
+      - name: Validar cuatro productos bilingües
         run: |
           python - <<'PY'
           from pathlib import Path
 
+          from PIL import Image
+          from scripts.mapa_sitrep import cargar_sitrep
+
           geo = Path("data/geografia/paises_americas.gpkg")
           out = Path("outputs/mapas")
-          pngs = list(out.glob("Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep*.png"))
-          pdfs = list(out.glob("Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep*.pdf"))
-          revisiones = list(out.glob("*_rev*.png"))
-
           assert geo.exists() and geo.stat().st_size > 0, "GeoPackage ausente"
-          assert pngs, "No se generó PNG"
-          assert pdfs, "No se generó PDF"
+
+          seleccion, _, _ = cargar_sitrep()
+          numero = int(seleccion["sitrep_numero"].max())
+          fecha = seleccion["fecha_publicacion"].max().strftime("%Y-%m-%d")
+          nombre = f"Mapa_prioridades_amenazas_salud_El_Nino_OPS_SitRep{numero:02d}_{fecha}"
+
+          for sufijo in ("", "_EN"):
+              png = out / f"{nombre}{sufijo}.png"
+              pdf = out / f"{nombre}{sufijo}.pdf"
+              for archivo in (png, pdf):
+                  assert archivo.is_file() and archivo.stat().st_size > 1000, (
+                      f"Falta el producto del SitRep actual: {archivo}"
+                  )
+              with Image.open(png) as im:
+                  im.verify()
+              with pdf.open("rb") as f:
+                  assert f.read(5) == b"%PDF-", f"PDF inválido: {pdf}"
+              print("Productos válidos:", png.name, pdf.name)
+
+          revisiones = list(out.glob("*_rev*.png"))
           assert not revisiones, f"No deben existir copias revXX: {revisiones}"
-          print("OK:", pngs[-1], pdfs[-1])
           PY
 
       - name: Guardar productos generados

@@ -9,7 +9,7 @@ Repositorio para el monitoreo mensual del fenómeno de El Niño y sus implicacio
 - `data/base_maestra_elnino.csv`: base longitudinal maestra; una fila por país y SitRep.
 - `data/geografia/paises_americas.gpkg`: geografía regional usada por el tablero y el mapa estático.
 - `scripts/preparar_geografia.py`: reconstruye el GeoPackage a partir de Natural Earth 1:50m.
-- `scripts/mapa_sitrep.py`: genera el PNG y PDF canónicos del mapa SitRep.
+- `scripts/mapa_sitrep.py`: genera el mapa SitRep en PDF y PNG, en español e inglés.
 - `assets/ops_oms.png`: logo institucional usado por los productos.
 - `outputs/mapas/`: productos estáticos generados.
 - `.github/workflows/validar_dashboard.yml`: única validación automática del tablero.
@@ -42,7 +42,16 @@ Para Streamlit Community Cloud, usar la rama `main` y `app.py` como archivo prin
 2. Actualizar `sitrep_numero`, `sitrep_id`, fechas, prioridad, declaratoria, atribución, textos, cifras e indicadores `icono_*`.
 3. Hacer commit y push.
 
-El workflow **Generar mapa SitRep** crea el PNG y PDF del corte vigente. El workflow **Validar dashboard** revisa sintaxis, mapa, filtros, reruns y la versión desplegada.
+El workflow **Generar mapa SitRep** genera automáticamente cuatro productos del corte vigente (PNG y PDF en español e inglés), los valida y los guarda en `outputs/mapas/`.
+Los archivos en español conservan los nombres históricos; los de inglés añaden `_EN` al final del nombre (por ejemplo, `..._2026-10-16_EN.png` y `..._2026-10-16_EN.pdf`).
+El workflow **Validar dashboard** revisa sintaxis, mapa, filtros, reruns y la versión desplegada.
+
+Para generar ambos idiomas localmente:
+
+```bash
+python scripts/mapa_sitrep.py --lang es
+python scripts/mapa_sitrep.py --lang en
+```
 
 ## Geografía
 
