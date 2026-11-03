@@ -2038,20 +2038,6 @@ with r3:
             config=CHART_CONFIG,
         )
 
-# Matriz integrada por país: permite identificar rápidamente qué países
-# explican las barras superiores sin repetir tres listas independientes.
-with st.container(border=True):
-    st.markdown("**Matriz por país**")
-    st.markdown(
-        '<div class="status-table-note">Lectura integrada de declaratoria, impacto en salud documentado '
-        'y atribución a El Niño, agrupada por subregión.</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        tabla_respuesta_pais_html(filtrado),
-        unsafe_allow_html=True,
-    )
-
 # Evolución temporal
 section_header("Evolución temporal", "Cambios entre cortes mensuales del SitRep")
 if base["sitrep_id"].nunique() < 2:
