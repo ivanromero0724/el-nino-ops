@@ -1501,7 +1501,7 @@ def leyenda_subregiones_html(datos):
     return '<div class="subregion-legend">' + "".join(items) + '</div>'
 
 
-def grafico_estado_binario(datos, tipo, altura=300):
+def grafico_estado_binario(datos, tipo, altura=375):
     """Resumen por estado, dividido por subregión; el hover lista los países."""
     if datos.empty:
         return go.Figure()
@@ -1550,7 +1550,7 @@ def grafico_estado_binario(datos, tipo, altura=300):
                     f"<b>{html.escape(subregion)}</b><br>"
                     "%{y}: %{x} países<br>%{customdata}<extra></extra>"
                 ),
-                showlegend=False,
+                showlegend=True,
             )
         )
 
@@ -1570,10 +1570,20 @@ def grafico_estado_binario(datos, tipo, altura=300):
 
     fig.update_layout(
         height=altura,
-        margin=dict(l=0, r=28, t=8, b=42),
+        margin=dict(l=0, r=28, t=8, b=140),
         paper_bgcolor="white",
         plot_bgcolor="white",
         barmode="stack",
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            x=0, xanchor="left",
+            y=-0.33, yanchor="top",
+            entrywidthmode="fraction", entrywidth=0.5,
+            font=dict(size=10, color=TEXTO),
+            bgcolor="rgba(0,0,0,0)",
+            traceorder="normal",
+        ),
         xaxis_title="Países",
         yaxis_title=None,
         bargap=.42,
@@ -2006,11 +2016,7 @@ with g2:
             config=CHART_CONFIG,
         )
 
-# Declaratorias e impacto sanitario: segunda fila de la situación regional.
-st.markdown(
-    leyenda_subregiones_html(filtrado),
-    unsafe_allow_html=True,
-)
+# Declaratorias e impacto sanitario: segunda fila con leyendas dentro de cada gráfico.
 r1, r2 = st.columns(2, gap="medium")
 with r1:
     with st.container(border=True):
