@@ -1980,7 +1980,10 @@ st.markdown(
 )
 
 # Situación regional
-section_header("Situación regional", "Comparación territorial y perfil de amenazas")
+section_header(
+    "Situación regional",
+    "Prioridades, amenazas, declaratorias, impacto sanitario y atribución a El Niño",
+)
 # Los dos gráficos usan exactamente la misma altura para que sus tarjetas
 # comiencen y terminen alineadas. La altura se adapta al número de países
 # visibles, pero se limita para evitar paneles demasiado altos o bajos.
@@ -2003,11 +2006,7 @@ with g2:
             config=CHART_CONFIG,
         )
 
-# Respuesta, impacto y atribución
-section_header(
-    "Respuesta, impacto y atribución",
-    "Países según declaratoria, impacto sanitario documentado y relación con El Niño, desagregados por subregión",
-)
+# Declaratorias, impacto y atribución: segunda fila de la situación regional.
 st.markdown(
     leyenda_subregiones_html(filtrado),
     unsafe_allow_html=True,
