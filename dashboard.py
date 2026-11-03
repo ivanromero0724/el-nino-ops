@@ -562,7 +562,7 @@ st.markdown(
         }}
 
         .country-summary {{
-            display:grid; grid-template-columns:minmax(180px,.8fr) 1.35fr 1fr;
+            display:grid; grid-template-columns:minmax(180px,.8fr) 1.8fr;
             gap:1rem; align-items:start; background:#F8FBFD;
             border:1px solid {BORDE}; border-radius:14px; padding:1rem 1.05rem;
             margin:.25rem 0 .75rem 0;
@@ -1982,7 +1982,7 @@ st.markdown(
 # Situación regional
 section_header(
     "Situación regional",
-    "Prioridades, amenazas, declaratorias, impacto sanitario y atribución a El Niño",
+    "Prioridades, amenazas, declaratorias e impacto sanitario documentado",
 )
 # Los dos gráficos usan exactamente la misma altura para que sus tarjetas
 # comiencen y terminen alineadas. La altura se adapta al número de países
@@ -2006,12 +2006,12 @@ with g2:
             config=CHART_CONFIG,
         )
 
-# Declaratorias, impacto y atribución: segunda fila de la situación regional.
+# Declaratorias e impacto sanitario: segunda fila de la situación regional.
 st.markdown(
     leyenda_subregiones_html(filtrado),
     unsafe_allow_html=True,
 )
-r1, r2, r3 = st.columns([1.0, 1.0, 1.35], gap="medium")
+r1, r2 = st.columns(2, gap="medium")
 with r1:
     with st.container(border=True):
         st.markdown("**Declaratoria**")
@@ -2025,14 +2025,6 @@ with r2:
         st.markdown("**Impacto en salud documentado**")
         st.plotly_chart(
             grafico_estado_binario(filtrado, "impacto"),
-            use_container_width=True,
-            config=CHART_CONFIG,
-        )
-with r3:
-    with st.container(border=True):
-        st.markdown("**Atribución a El Niño**")
-        st.plotly_chart(
-            grafico_atribucion_elnino(filtrado),
             use_container_width=True,
             config=CHART_CONFIG,
         )
@@ -2103,10 +2095,6 @@ else:
                 <div>
                     <div class="summary-label">Situación predominante</div>
                     <div class="summary-text">{texto_html(fila.get('situacion_predominante'))}</div>
-                </div>
-                <div>
-                    <div class="summary-label">Atribución a El Niño</div>
-                    <div class="summary-text">{texto_html(fila.get('atribucion_elnino'))}</div>
                 </div>
             </div>
             """,
