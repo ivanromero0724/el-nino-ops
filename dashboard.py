@@ -693,6 +693,19 @@ def cargar_base():
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
 
+    # Tabla 1: cualquier marca, incluso ▲ o ◇, activa el pictograma.
+    # Se conserva la distinción entre afectación observada e impacto potencial
+    # para la tabla. Solo el mapa prioriza afectación cuando ambas están marcadas.
+    if {"tabla1_orden", "tabla1_servicios_observado", "tabla1_servicios_potencial"}.issubset(df.columns):
+        filas_tabla1 = pd.to_numeric(df["tabla1_orden"], errors="coerce").notna()
+        for origen, destino in (
+            ("tabla1_servicios_observado", "icono_servicios"),
+            ("tabla1_servicios_potencial", "icono_servicios_potencial"),
+        ):
+            df.loc[filas_tabla1, destino] = (
+                df.loc[filas_tabla1, origen].fillna("").astype(str).str.strip().ne("").astype(int)
+            )
+
     return df
 
 

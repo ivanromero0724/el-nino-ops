@@ -22,7 +22,11 @@ Repositorio para el monitoreo mensual del fenómeno de El Niño y sus implicacio
 
 La base mantiene una sola tabla. Para cada actualización mensual se agregan nuevas filas y se conservan los SitRep anteriores. La llave temporal es `sitrep_id`; dentro de cada SitRep debe existir una sola fila por `iso3`.
 
-Las variables `icono_agua`, `icono_inundaciones`, `icono_incendios`, `icono_alimentos`, `icono_arbovirosis`, `icono_respiratorio`, `icono_servicios` e `icono_servicios_potencial` usan valores 0/1 y alimentan directamente los pictogramas del mapa y las visualizaciones del tablero. En servicios de salud, `icono_servicios` representa afectación o presión operacional documentada y `icono_servicios_potencial` identifica impacto potencial sin afectación observada en la síntesis regional.
+Las variables `icono_agua`, `icono_inundaciones`, `icono_incendios`, `icono_alimentos`, `icono_arbovirosis`, `icono_respiratorio`, `icono_servicios` e `icono_servicios_potencial` usan valores 0/1 y alimentan los pictogramas del mapa y las visualizaciones del tablero.
+
+**Regla de servicios de salud (SitRep 2 y posteriores):** cualquier marca en la columna de **Afectación o presión observada** de la Tabla 1 (●, ▲ u otra) activa `icono_servicios`; cualquier marca en **Impacto potencial**, incluida ◇ de preparación, activa `icono_servicios_potencial`. La base conserva **ambas** marcas; solo al dibujar los mapas interactivo y estático se da prioridad al pictograma de **afectación** cuando ambas están marcadas. Si ninguna columna tiene marca, no se dibuja ningún pictograma de servicios.
+
+En SitRep 3, los campos `tabla1_orden`, `tabla1_pais`, `tabla1_declaratoria`, `tabla1_otras_afectaciones`, `tabla1_servicios_observado` y `tabla1_servicios_potencial` transcriben la Tabla 1 del borrador Word sin deducciones a partir de los resúmenes narrativos. Los campos `simbolo_*` conservan las marcas de amenazas y efectos sanitarios. La sección *Síntesis regional* muestra por defecto la vista completa y mantiene el orden de países y subregiones del documento, agrupando Canadá y Estados Unidos en una fila cuando ambos están incluidos. Los SitRep anteriores no se modifican.
 
 ## Dashboard
 

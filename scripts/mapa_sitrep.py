@@ -227,6 +227,19 @@ def cargar_sitrep():
         if not set(s[c].unique()).issubset({0, 1}):
             raise ValueError(f"{c} solo puede contener 0/1")
 
+    # Regla cartográfica SitRep 2 y 3: cualquier marca en Tabla 1 activa
+    # su pictograma de servicios, sin importar el tipo de símbolo.
+    # Si ambas están activas, amenazas() muestra solo afectación observada.
+    if {"tabla1_orden", "tabla1_servicios_observado", "tabla1_servicios_potencial"}.issubset(s.columns):
+        filas_tabla1 = pd.to_numeric(s["tabla1_orden"], errors="coerce").notna()
+        for origen, destino in (
+            ("tabla1_servicios_observado", "icono_servicios"),
+            ("tabla1_servicios_potencial", "icono_servicios_potencial"),
+        ):
+            s.loc[filas_tabla1, destino] = (
+                s.loc[filas_tabla1, origen].fillna("").astype(str).str.strip().ne("").astype(int)
+            )
+
     validas = {"Alta", "Media", "Baja", "Sin priorización"}
     if not set(s["prioridad"].dropna()).issubset(validas):
         raise ValueError("Hay prioridades no reconocidas en la base maestra")
