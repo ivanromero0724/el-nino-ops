@@ -1252,13 +1252,10 @@ def _estado_indicador(fila, columna, dominio="amenaza"):
     if columna not in fila.index or pd.isna(fila.get(columna)) or int(fila.get(columna)) != 1:
         return ""
 
-    # SitRep 3: evidencia explícita de la Tabla 1 (● oficial, ▲ pendiente,
-    # ○ potencial, ◇ preparación). SitRep 1 y 2 conservan reglas históricas.
-    if dominio not in {"servicio", "servicio_potencial"}:
-        campo_simbolo = "simbolo_" + columna.removeprefix("icono_")
-        simbolo_fuente = texto(fila.get(campo_simbolo), "")
-        if simbolo_fuente in {"●", "○", "▲", "◇"}:
-            return simbolo_fuente
+    # SitRep 3: las marcas de la Tabla 1 son la fuente, sin inferencias a partir
+    # de narrativas; una celda vacía permanece vacía.
+    if int(fila.get("sitrep_numero", 0) or 0) == 3 and dominio not in {"servicio", "servicio_potencial"}:
+        return texto(fila.get("simbolo_" + columna.removeprefix("icono_")), "")
 
     if dominio == "servicio_potencial":
         simbolo = texto(fila.get("servicios_potencial_simbolo"), "")
@@ -1381,10 +1378,22 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
         categories=SUBREGION_ORDEN + ["Sin subregión"],
         ordered=True,
     )
-    tmp = tmp.sort_values(
-        ["_suborden", "pais"],
-        key=lambda s: s.astype(str).str.lower() if s.name == "pais" else s,
-    )
+    es_tabla1 = bool(tmp["sitrep_numero"].eq(3).all())
+    if es_tabla1:
+        # Tabla 1 del Word: el último renglón reúne Canadá y Estados Unidos.
+        # Con filtros individuales, cada uno vuelve a mostrarse por separado.
+        if {"CAN", "USA"}.issubset(set(tmp["iso3"])):
+            tmp = tmp[tmp["iso3"] != "USA"].copy()
+        else:
+            mask_norte = tmp["iso3"].isin(["CAN", "USA"])
+            tmp.loc[mask_norte, "tabla1_pais"] = tmp.loc[mask_norte, "pais"]
+        tmp["_orden_tabla1"] = pd.to_numeric(tmp["tabla1_orden"], errors="coerce").fillna(999)
+        tmp = tmp.sort_values(["_suborden", "_orden_tabla1"])
+    else:
+        tmp = tmp.sort_values(
+            ["_suborden", "pais"],
+            key=lambda s: s.astype(str).str.lower() if s.name == "pais" else s,
+        )
 
     filas = []
     for subregion, grupo in tmp.groupby("subregion", sort=False, observed=True):
@@ -1394,12 +1403,12 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
         colspan = 6 if vista == "Resumida" else 10
         filas.append(
             f'<tr class="synth-region-row"><td colspan="{colspan}">'
-            f'{html.escape(str(subregion))}</td></tr>'
+            f'{html.escape("Región Andina" if es_tabla1 and subregion == "Subregión Andina" else str(subregion))}</td></tr>'
         )
 
         for _, fila in grupo.iterrows():
-            pais = html.escape(texto(fila.get("pais"), "—"))
-            decl = _declaratoria_sintesis_html(fila)
+            pais = html.escape(texto(fila.get("tabla1_pais"), texto(fila.get("pais"), "—")) if es_tabla1 else texto(fila.get("pais"), "—"))
+            decl = html.escape(texto(fila.get("tabla1_declaratoria"), "")) if es_tabla1 else _declaratoria_sintesis_html(fila)
 
             estados = {
                 "Sequía": _estado_indicador(fila, "icono_agua", "amenaza"),
@@ -1408,7 +1417,8 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                 "Alimentación": _estado_indicador(fila, "icono_alimentos", "salud"),
                 "Arbovirosis": _estado_indicador(fila, "icono_arbovirosis", "salud"),
             }
-            otras = _otras_afectaciones_cortas(fila)
+            otras = [] if es_tabla1 else _otras_afectaciones_cortas(fila)
+            otras_word = texto(fila.get("tabla1_otras_afectaciones"), "") if es_tabla1 else ""
             serv_obs = _estado_indicador(fila, "icono_servicios", "servicio")
             serv_pot = _estado_indicador(fila, "icono_servicios_potencial", "servicio_potencial")
 
@@ -1431,17 +1441,27 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                     impacto_tokens.append(
                         f'<span class="synth-summary-token"><span class="synth-symbol health">○</span> {html.escape(etiqueta)}</span>'
                     )
+                if otras_word:
+                    impacto_tokens.append(
+                        f'<span class="synth-summary-token">{html.escape(otras_word).replace(chr(10), "<br>")}</span>'
+                    )
 
                 servicios_tokens = []
-                if serv_obs:
-                    etiqueta_serv = _servicio_observado_etiqueta(fila)
-                    servicios_tokens.append(
-                        f'<span class="synth-summary-token">{_simbolo_html(serv_obs, "services")} {html.escape(etiqueta_serv)}</span>'
-                    )
-                if serv_pot:
-                    servicios_tokens.append(
-                        f'<span class="synth-summary-token">{_simbolo_html(serv_pot, "services")} Potencial</span>'
-                    )
+                if es_tabla1:
+                    for campo in ("tabla1_servicios_observado", "tabla1_servicios_potencial"):
+                        valor = texto(fila.get(campo), "")
+                        if valor:
+                            servicios_tokens.append(f'<span class="synth-summary-token">{html.escape(valor)}</span>')
+                else:
+                    if serv_obs:
+                        etiqueta_serv = _servicio_observado_etiqueta(fila)
+                        servicios_tokens.append(
+                            f'<span class="synth-summary-token">{_simbolo_html(serv_obs, "services")} {html.escape(etiqueta_serv)}</span>'
+                        )
+                    if serv_pot:
+                        servicios_tokens.append(
+                            f'<span class="synth-summary-token">{_simbolo_html(serv_pot, "services")} Potencial</span>'
+                        )
 
                 prioridad = texto(fila.get("prioridad"), "Sin priorización")
                 color_p = COLORES_PRIORIDAD.get(prioridad, GRIS)
@@ -1460,15 +1480,22 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                     "</tr>"
                 )
             else:
-                otras_html = "<br>".join(
-                    f'<span class="synth-small-text">○ {html.escape(x)}</span>' for x in otras
-                )
-                serv_obs_html = ""
-                if serv_obs:
-                    serv_obs_html = (
-                        _simbolo_html(serv_obs, "services")
-                        + f'<span class="synth-small-text"> {_servicio_observado_etiqueta(fila)}</span>'
+                if es_tabla1:
+                    # Transcripción literal de las tres columnas de la Tabla 1.
+                    otras_html = html.escape(otras_word).replace("\\n", "<br>")
+                    serv_obs_html = html.escape(texto(fila.get("tabla1_servicios_observado"), ""))
+                    serv_pot_html = html.escape(texto(fila.get("tabla1_servicios_potencial"), ""))
+                else:
+                    otras_html = "<br>".join(
+                        f'<span class="synth-small-text">○ {html.escape(x)}</span>' for x in otras
                     )
+                    serv_obs_html = ""
+                    if serv_obs:
+                        serv_obs_html = (
+                            _simbolo_html(serv_obs, "services")
+                            + f'<span class="synth-small-text"> {_servicio_observado_etiqueta(fila)}</span>'
+                        )
+                    serv_pot_html = _simbolo_html(serv_pot, "services")
 
                 filas.append(
                     "<tr>"
@@ -1481,7 +1508,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                     f'<td>{_simbolo_html(estados["Arbovirosis"], "health")}</td>'
                     f'<td style="text-align:left">{otras_html}</td>'
                     f'<td>{serv_obs_html}</td>'
-                    f'<td>{_simbolo_html(serv_pot, "services")}</td>'
+                    f'<td>{serv_pot_html}</td>'
                     "</tr>"
                 )
 
@@ -1514,7 +1541,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
             '<th>Incendios</th>'
             '<th>Inseguridad alimentaria / desnutrición</th>'
             '<th>Enfermedades vectoriales / arbovirosis</th>'
-            '<th>Otras afectaciones</th>'
+            '<th>Otras afectaciones documentadas</th>'
             '<th>Afectación o presión observada</th>'
             '<th>Impacto potencial</th>'
             '</tr>'
@@ -2003,11 +2030,6 @@ with col_resumen:
         }.issubset(filtrado.columns):
             # Solo países con riesgo potencial y sin afectación observada.
             n = int(((filtrado["icono_servicios_potencial"] == 1) & (filtrado["icono_servicios"] != 1)).sum())
-        elif sitrep_id == "SITREP_03_2026-11-18" and col == "icono_servicios":
-            # Argentina solo ▲: excluida de los siete reportes oficiales ●.
-            n = int(((filtrado[col] == 1) & (filtrado["servicios_observado_simbolo"] == "●")).sum())
-        elif sitrep_id == "SITREP_03_2026-11-18" and "simbolo_" + col.removeprefix("icono_") in filtrado.columns:
-            n = int((filtrado["simbolo_" + col.removeprefix("icono_")] == "●").sum())
         else:
             n = int(filtrado[col].sum()) if col in filtrado.columns else 0
         filas_amenazas.append(
@@ -2042,19 +2064,17 @@ with col_resumen:
         unsafe_allow_html=True,
     )
 
-if sitrep_id == "SITREP_03_2026-11-18":
-    st.caption("SitRep 3: los conteos de amenazas y afectación observada corresponden a reportes oficiales (●). Los pictogramas y la matriz incluyen además fuentes secundarias (▲) y riesgos potenciales (○). Las medidas de preparación (◇) no equivalen a daños en establecimientos. El indicador potencial de servicios cuenta solo países sin afectación observada.")
-
 # Síntesis regional por país y territorio
 section_header(
     "Síntesis regional por país y territorio",
-    "Lectura rápida del corte seleccionado, inspirada en la tabla de síntesis del SitRep",
+    "Correspondencia con la Tabla 1 del SitRep 3" if sitrep_id == "SITREP_03_2026-11-18" else "Lectura rápida del corte seleccionado, inspirada en la tabla de síntesis del SitRep",
 )
 vista_sintesis = st.radio(
     "Vista de la tabla",
     ["Resumida", "Completa"],
     horizontal=True,
-    key="vista_sintesis_regional",
+    index=1 if sitrep_id == "SITREP_03_2026-11-18" else 0,
+    key="vista_sintesis_regional_v3" if sitrep_id == "SITREP_03_2026-11-18" else "vista_sintesis_regional",
     label_visibility="collapsed",
 )
 st.markdown(leyenda_sintesis_html(), unsafe_allow_html=True)
