@@ -123,6 +123,58 @@ ETIQUETAS_CIFRAS_SITREP2 = {
     },
 }
 
+ETIQUETAS_CIFRAS_SITREP3 = {
+    "HND": {
+        "personas_inseguridad_alimentaria_min": "Inseguridad alimentaria (antec.)",
+        "municipios_afectados": "Municipios en alerta roja (corte nov)"
+    },
+    "GTM": {
+        "personas_afectadas": "Afectados por lluvias (7-nov)",
+        "muertes": "Fallecidos por lluvias (25-oct)",
+        "personas_inseguridad_alimentaria_min": "Fase CIF 3+ (proy. oct–feb)",
+        "personas_inseguridad_alimentaria_max": "Fase CIF 3+ (jul–sep)"
+    },
+    "PAN": {
+        "personas_afectadas": "Afectados por inundaciones (antecedente, más de)"
+    },
+    "PER": {
+        "muertes": "Fallecidos por lluvias (antec. 2025–ago 2026)",
+        "municipios_afectados": "Distritos declarados en emergencia por lluvias"
+    },
+    "BOL": {
+        "familias_afectadas": "Familias afectadas o damnificadas por sequía",
+        "muertes": "Fallecido por incendio (fuente secundaria)",
+        "municipios_afectados": "Municipios afectados por sequía"
+    },
+    "ECU": {
+        "personas_afectadas": "Personas afectadas por lluvias (16-nov)",
+        "personas_damnificadas": "Personas damnificadas por lluvias (16-nov)",
+        "muertes": "Fallecidos por lluvias (desde 29-ago)",
+        "establecimientos_salud_afectados": "Centros de salud afectados (16-nov)"
+    },
+    "BRA": {
+        "municipios_afectados": "Municipios en sequía extrema (oct)"
+    },
+    "CHL": {
+        "personas_damnificadas": "Damnificados (temporal 23-oct)",
+        "muertes": "Fallecidos (antec. temporal julio)",
+        "establecimientos_salud_afectados": "Establecimiento afectado (antec. 8-oct)"
+    },
+    "ARG": {
+        "muertes": "Fallecidos (fuente secundaria, sin corroborar)"
+    },
+    "PRY": {
+        "familias_afectadas": "Familias afectadas (fuente secundaria, más de)"
+    },
+    "VCT": {
+        "establecimientos_salud_afectados": "Establecimientos afectados (antec. 5-oct)"
+    },
+    "MEX": {
+        "muertes": "Fallecidos en Veracruz (fuente secundaria)",
+        "municipios_afectados": "Municipios afectados por perturbación 90-E"
+    }
+}
+
 CHART_CONFIG = {
     "displayModeBar": False,
     "scrollZoom": False,
@@ -672,6 +724,9 @@ def etiqueta_cifra(fila, columna):
     if int(fila.get("sitrep_numero", 0) or 0) == 2:
         iso = texto(fila.get("iso3"), "").upper()
         etiqueta = ETIQUETAS_CIFRAS_SITREP2.get(iso, {}).get(columna, etiqueta)
+    elif int(fila.get("sitrep_numero", 0) or 0) == 3:
+        iso = texto(fila.get("iso3"), "").upper()
+        etiqueta = ETIQUETAS_CIFRAS_SITREP3.get(iso, {}).get(columna, etiqueta)
     return etiqueta
 
 
@@ -1892,6 +1947,9 @@ with st.container(border=True):
             type="primary",
             width="stretch",
         )
+
+if sitrep_id == "SITREP_03_2026-11-18":
+    st.info("**SitRep 3 — borrador de trabajo.** Fecha de corte prevista: 18/11/2026. Las cifras y clasificaciones corresponden al documento preliminar y están sujetas a validación institucional.")
 
 filtrado = actual.copy()
 if filtro_sub:
