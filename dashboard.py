@@ -1380,6 +1380,9 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
     )
     es_tabla1 = bool(tmp["sitrep_numero"].eq(3).all())
     if es_tabla1:
+        # La Tabla 1 ordena las subregiones distinto del resto del tablero.
+        orden_word = ["América Central", "Subregión Andina", "Brasil y Cono Sur", "Caribe", "América del Norte"]
+        tmp["_suborden"] = pd.Categorical(tmp["subregion"], categories=orden_word + ["Sin subregión"], ordered=True)
         # Tabla 1 del Word: el último renglón reúne Canadá y Estados Unidos.
         # Con filtros individuales, cada uno vuelve a mostrarse por separado.
         if {"CAN", "USA"}.issubset(set(tmp["iso3"])):
@@ -1482,7 +1485,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
             else:
                 if es_tabla1:
                     # Transcripción literal de las tres columnas de la Tabla 1.
-                    otras_html = html.escape(otras_word).replace("\\n", "<br>")
+                    otras_html = html.escape(otras_word).replace(chr(10), "<br>")
                     serv_obs_html = html.escape(texto(fila.get("tabla1_servicios_observado"), ""))
                     serv_pot_html = html.escape(texto(fila.get("tabla1_servicios_potencial"), ""))
                 else:
