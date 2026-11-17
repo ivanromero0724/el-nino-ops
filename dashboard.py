@@ -1252,6 +1252,14 @@ def _estado_indicador(fila, columna, dominio="amenaza"):
     if columna not in fila.index or pd.isna(fila.get(columna)) or int(fila.get(columna)) != 1:
         return ""
 
+    # SitRep 3: evidencia explícita de la Tabla 1 (● oficial, ▲ pendiente,
+    # ○ potencial, ◇ preparación). SitRep 1 y 2 conservan reglas históricas.
+    if dominio not in {"servicio", "servicio_potencial"}:
+        campo_simbolo = "simbolo_" + columna.removeprefix("icono_")
+        simbolo_fuente = texto(fila.get(campo_simbolo), "")
+        if simbolo_fuente in {"●", "○", "▲", "◇"}:
+            return simbolo_fuente
+
     if dominio == "servicio_potencial":
         simbolo = texto(fila.get("servicios_potencial_simbolo"), "")
         return simbolo if simbolo in {"●", "○", "▲", "◇"} else "○"
@@ -1993,8 +2001,13 @@ with col_resumen:
         if col == "icono_servicios_potencial" and {
             "icono_servicios_potencial", "icono_servicios"
         }.issubset(filtrado.columns):
-            # El mapa no duplica servicios: observado tiene prioridad visual.
+            # Solo países con riesgo potencial y sin afectación observada.
             n = int(((filtrado["icono_servicios_potencial"] == 1) & (filtrado["icono_servicios"] != 1)).sum())
+        elif sitrep_id == "SITREP_03_2026-11-18" and col == "icono_servicios":
+            # Argentina solo ▲: excluida de los siete reportes oficiales ●.
+            n = int(((filtrado[col] == 1) & (filtrado["servicios_observado_simbolo"] == "●")).sum())
+        elif sitrep_id == "SITREP_03_2026-11-18" and "simbolo_" + col.removeprefix("icono_") in filtrado.columns:
+            n = int((filtrado["simbolo_" + col.removeprefix("icono_")] == "●").sum())
         else:
             n = int(filtrado[col].sum()) if col in filtrado.columns else 0
         filas_amenazas.append(
@@ -2028,6 +2041,9 @@ with col_resumen:
         '</div>',
         unsafe_allow_html=True,
     )
+
+if sitrep_id == "SITREP_03_2026-11-18":
+    st.caption("SitRep 3: los conteos de amenazas y afectación observada corresponden a reportes oficiales (●). Los pictogramas y la matriz incluyen además fuentes secundarias (▲) y riesgos potenciales (○). Las medidas de preparación (◇) no equivalen a daños en establecimientos. El indicador potencial de servicios cuenta solo países sin afectación observada.")
 
 # Síntesis regional por país y territorio
 section_header(
