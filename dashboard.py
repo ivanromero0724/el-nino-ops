@@ -193,11 +193,15 @@ st.set_page_config(
 st.markdown(
     f"""
     <style>
-        :root {{ --ops-blue:{AZUL_OPS}; --ops-blue2:{AZUL_SEC}; --ops-border:{BORDE}; }}
+        :root {{ --ops-blue:{AZUL_OPS}; --ops-blue2:{AZUL_SEC}; --ops-border:{BORDE}; --content-width:1280px; }}
+        /* El mismo ancho máximo y márgenes internos de Clúster Salud Venezuela v2. */
+        [data-testid="stMainBlockContainer"],
         .block-container {{
-            padding-top: 4.25rem !important;
-            padding-bottom: 2.2rem;
-            max-width: 1420px;
+            width:min(100%,var(--content-width));
+            max-width:var(--content-width);
+            padding:4.25rem 1.35rem 2.2rem;
+            padding-top:4.25rem !important;
+            margin-inline:auto;
         }}
         h1, h2, h3 {{color:{AZUL_OPS};}}
         [data-testid="stHeader"] {{background:rgba(255,255,255,.96);}}
@@ -684,7 +688,12 @@ st.markdown(
         div[data-testid="stSelectbox"], div[data-testid="stMultiSelect"] {{font-size:.9rem;}}
 
         @media (max-width: 900px) {{
-            .block-container {{padding-top:4.75rem !important;}}
+            [data-testid="stMainBlockContainer"],
+            .block-container {{
+                width:100%;
+                padding:4.75rem .75rem 2.2rem;
+                padding-top:4.75rem !important;
+            }}
             .ops-hero {{padding:1rem; gap:1rem;}}
             .ops-title {{font-size:1.55rem;}}
             .ops-logo {{width:165px; max-width:32vw;}}
