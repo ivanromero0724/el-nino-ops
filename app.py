@@ -294,7 +294,7 @@ def _construir_folium(frame_globals):
             ],
             aliases=[
                 "<b>País:</b>",
-                "<b>Prioridad:</b>",
+                "<b>Prioridad según el monitoreo:</b>",
                 "<b>Amenazas / impactos:</b>",
             ],
             localize=False,
