@@ -579,6 +579,7 @@ st.markdown(
             line-height:1;
             cursor:default;
         }}
+        .synth-symbol.alert {{color:#7353A6;}}
         .synth-symbol.hazard {{color:#198CC7;}}
         .synth-symbol.health {{color:#178A78;}}
         .synth-symbol.services {{color:#B34735;}}
@@ -1322,6 +1323,27 @@ def _simbolo_html(simbolo, dominio):
     )
 
 
+def _texto_tabla1_html(valor, dominio):
+    """Mantiene el texto literal del Word y colorea las marcas con el estilo existente.
+
+    Los símbolos de la Tabla 1 no son pictogramas cartográficos: se muestran
+    con la misma clase .synth-symbol que los demás indicadores de la matriz.
+    """
+    contenido = texto(valor, "")
+    if not contenido:
+        return ""
+    partes = re.split(r"([●○▲◇])", contenido)
+    salida = []
+    for parte in partes:
+        if parte in {"●", "○", "▲", "◇"}:
+            salida.append(_simbolo_html(parte, dominio))
+        elif parte:
+            salida.append(
+                f'<span class="synth-small-text">{html.escape(parte).replace(chr(10), "<br>")}</span>'
+            )
+    return "".join(salida)
+
+
 def _otras_afectaciones_cortas(fila):
     """Extrae etiquetas breves de otras afectaciones descritas en el SitRep."""
     t = _texto_indicador(fila, ["impacto_salud_resumen", "amenazas_resumen", "observaciones"])
@@ -1424,7 +1446,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
 
         for _, fila in grupo.iterrows():
             pais = html.escape(texto(fila.get("tabla1_pais"), texto(fila.get("pais"), "—")) if es_tabla1 else texto(fila.get("pais"), "—"))
-            decl = html.escape(texto(fila.get("tabla1_declaratoria"), "")) if es_tabla1 else _declaratoria_sintesis_html(fila)
+            decl = _texto_tabla1_html(fila.get("tabla1_declaratoria"), "alert") if es_tabla1 else _declaratoria_sintesis_html(fila)
 
             estados = {
                 "Sequía": _estado_indicador(fila, "icono_agua", "amenaza"),
@@ -1459,7 +1481,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                     )
                 if otras_word:
                     impacto_tokens.append(
-                        f'<span class="synth-summary-token">{html.escape(otras_word).replace(chr(10), "<br>")}</span>'
+                        f'<span class="synth-summary-token">{_texto_tabla1_html(otras_word, "health")}</span>'
                     )
 
                 servicios_tokens = []
@@ -1467,7 +1489,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                     for campo in ("tabla1_servicios_observado", "tabla1_servicios_potencial"):
                         valor = texto(fila.get(campo), "")
                         if valor:
-                            servicios_tokens.append(f'<span class="synth-summary-token">{html.escape(valor)}</span>')
+                            servicios_tokens.append(f'<span class="synth-summary-token">{_texto_tabla1_html(valor, "services")}</span>')
                 else:
                     if serv_obs:
                         etiqueta_serv = _servicio_observado_etiqueta(fila)
@@ -1498,9 +1520,9 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
             else:
                 if es_tabla1:
                     # Transcripción literal de las tres columnas de la Tabla 1.
-                    otras_html = html.escape(otras_word).replace(chr(10), "<br>")
-                    serv_obs_html = html.escape(texto(fila.get("tabla1_servicios_observado"), ""))
-                    serv_pot_html = html.escape(texto(fila.get("tabla1_servicios_potencial"), ""))
+                    otras_html = _texto_tabla1_html(otras_word, "health")
+                    serv_obs_html = _texto_tabla1_html(fila.get("tabla1_servicios_observado"), "services")
+                    serv_pot_html = _texto_tabla1_html(fila.get("tabla1_servicios_potencial"), "services")
                 else:
                     otras_html = "<br>".join(
                         f'<span class="synth-small-text">○ {html.escape(x)}</span>' for x in otras
