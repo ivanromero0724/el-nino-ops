@@ -599,6 +599,34 @@ st.markdown(
             margin:0 .38rem .12rem 0;
             white-space:nowrap;
         }}
+        /* Los textos del Word pueden ocupar más de una línea sin
+           desbordarse hacia otras columnas de la tabla. */
+        .synth-summary-token.synth-summary-word {{
+            display:block;
+            max-width:100%;
+            margin:.14rem 0 .2rem;
+            white-space:normal;
+            overflow-wrap:break-word;
+        }}
+        .synthesis-table .synth-word-line {{
+            display:block;
+            max-width:100%;
+            line-height:1.4;
+            white-space:normal;
+            overflow-wrap:break-word;
+        }}
+        .synthesis-table .synth-word-line + .synth-word-line {{
+            margin-top:.17rem;
+        }}
+        .synthesis-table .synth-word-line .synth-small-text {{
+            display:inline;
+            white-space:normal;
+            overflow-wrap:break-word;
+        }}
+        .synthesis-table .synth-word-line .synth-symbol {{
+            vertical-align:baseline;
+            margin-right:.1rem;
+        }}
         .synth-priority {{
             display:inline-flex;
             align-items:center;
@@ -1332,15 +1360,20 @@ def _texto_tabla1_html(valor, dominio):
     contenido = texto(valor, "")
     if not contenido:
         return ""
-    partes = re.split(r"([●○▲◇])", contenido)
+    # Cada renglón del Word ocupa una línea de la celda. Un texto largo
+    # puede ocupar varias líneas físicas sin invadir la columna siguiente.
     salida = []
-    for parte in partes:
-        if parte in {"●", "○", "▲", "◇"}:
-            salida.append(_simbolo_html(parte, dominio))
-        elif parte:
-            salida.append(
-                f'<span class="synth-small-text">{html.escape(parte).replace(chr(10), "<br>")}</span>'
-            )
+    for linea in contenido.splitlines():
+        if not linea.strip():
+            continue
+        partes = re.split(r"([●○▲◇])", linea)
+        fragmentos = []
+        for parte in partes:
+            if parte in {"●", "○", "▲", "◇"}:
+                fragmentos.append(_simbolo_html(parte, dominio))
+            elif parte:
+                fragmentos.append(f'<span class="synth-small-text">{html.escape(parte)}</span>')
+        salida.append('<span class="synth-word-line">' + "".join(fragmentos) + '</span>')
     return "".join(salida)
 
 
@@ -1481,7 +1514,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                     )
                 if otras_word:
                     impacto_tokens.append(
-                        f'<span class="synth-summary-token">{_texto_tabla1_html(otras_word, "health")}</span>'
+                        f'<span class="synth-summary-token synth-summary-word">{_texto_tabla1_html(otras_word, "health")}</span>'
                     )
 
                 servicios_tokens = []
@@ -1489,7 +1522,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
                     for campo in ("tabla1_servicios_observado", "tabla1_servicios_potencial"):
                         valor = texto(fila.get(campo), "")
                         if valor:
-                            servicios_tokens.append(f'<span class="synth-summary-token">{_texto_tabla1_html(valor, "services")}</span>')
+                            servicios_tokens.append(f'<span class="synth-summary-token synth-summary-word">{_texto_tabla1_html(valor, "services")}</span>')
                 else:
                     if serv_obs:
                         etiqueta_serv = _servicio_observado_etiqueta(fila)
