@@ -26,7 +26,7 @@ Las variables `icono_agua`, `icono_inundaciones`, `icono_incendios`, `icono_alim
 
 **Regla de servicios de salud (SitRep 2 y posteriores):** cualquier marca en la columna de **Afectación o presión observada** de la Tabla 1 (●, ▲ u otra) activa `icono_servicios`; cualquier marca en **Impacto potencial**, incluida ◇ de preparación, activa `icono_servicios_potencial`. La base conserva **ambas** marcas; solo al dibujar los mapas interactivo y estático se da prioridad al pictograma de **afectación** cuando ambas están marcadas. Si ninguna columna tiene marca, no se dibuja ningún pictograma de servicios.
 
-En SitRep 3, los campos `tabla1_orden`, `tabla1_pais`, `tabla1_declaratoria`, `tabla1_otras_afectaciones`, `tabla1_servicios_observado` y `tabla1_servicios_potencial` transcriben la Tabla 1 del borrador Word sin deducciones a partir de los resúmenes narrativos. Los campos `simbolo_*` conservan las marcas de amenazas y efectos sanitarios. La sección *Síntesis regional* muestra por defecto la vista completa y mantiene el orden de países y subregiones del documento, agrupando Canadá y Estados Unidos en una fila cuando ambos están incluidos. Los SitRep anteriores no se modifican.
+En SitRep 3, los campos `tabla1_orden`, `tabla1_pais`, `tabla1_declaratoria`, `tabla1_otras_afectaciones`, `tabla1_servicios_observado` y `tabla1_servicios_potencial` transcriben la Tabla 1 de la versión definitiva del SitRep 3 (18-nov-2026) sin deducciones a partir de los resúmenes narrativos. Los campos `simbolo_*` conservan las marcas de amenazas y efectos sanitarios. La sección *Síntesis regional* muestra por defecto la vista completa y mantiene el orden de países y subregiones del documento, agrupando Canadá y Estados Unidos en una fila cuando ambos están incluidos. Los SitRep anteriores no se modifican.
 
 ## Dashboard
 
@@ -61,3 +61,9 @@ python scripts/mapa_sitrep.py --lang en
 ## Geografía
 
 La geografía regional proviene de Natural Earth Admin 0 Countries, escala 1:50m, en EPSG:4326. La unión con la base se realiza mediante `iso3` ↔ `ISO_CC`. El GeoPackage se reconstruye con `python scripts/preparar_geografia.py` solo cuando sea necesario actualizar la geografía; el workflow mensual usa el archivo ya versionado.
+
+## SitRep 3 definitivo
+
+La edición definitiva española (18 de noviembre de 2026) sustituyó el borrador. Costa Rica pasó a prioridad Alta (alerta subnacional y sequía oficiales), y Paraguay a Media (lluvias oficiales y presión operacional en servicios). Los registros nacionales conservan en `justificacion_monitoreo` el texto del Anexo 1, con su bibliografía renumerada y criterios de priorización. El número de países por prioridad es Alta 8, Media 6, Baja 5 y Sin priorización 2.
+
+En la Tabla 1 definitiva hay 11 marcas oficiales de sequía, 10 de lluvias, 5 de incendios y 8 de afectación o presión en servicios. Para el mapa se representan **todas** las marcas de servicios, incluidas fuentes secundarias: 10 con afectación/presión marcada y 4 solo con impacto potencial; la marca de afectación se impone cuando ambas columnas están marcadas. Los recuentos oficiales no deben confundirse con la cantidad de pictogramas del mapa. La estimación regional del informe de aproximadamente 374.000 personas y las 120 defunciones seleccionadas siguen definiciones, fuentes y periodos específicos; no son sumas indiscriminadas de todas las columnas numéricas de la base.

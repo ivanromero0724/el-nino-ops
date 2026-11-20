@@ -1591,7 +1591,7 @@ def tabla_sintesis_regional_html(datos, vista="Resumida"):
             '<th class="synth-group-hazard" rowspan="2" style="width:21%">Amenazas hidrometeorológicas</th>'
             '<th class="synth-group-health" rowspan="2" style="width:22%">Impacto en salud pública</th>'
             '<th class="synth-group-services" rowspan="2" style="width:14%">Servicios de salud</th>'
-            '<th rowspan="2" style="background:#5C7182;width:8%">Prioridad del monitoreo</th>'
+            '<th rowspan="2" style="background:#5C7182;width:8%">Prioridad basada en el monitoreo</th>'
             '</tr><tr></tr></thead>'
         )
         min_width = "1000px"
@@ -2038,7 +2038,7 @@ with st.container(border=True):
         with f3:
             opciones_pri = [p for p in ORDEN_PRIORIDAD if p in set(actual["prioridad"].dropna())]
             filtro_pri = st.multiselect(
-                "Prioridad según el monitoreo", opciones_pri, placeholder="Todas", key="filtro_prioridad"
+                "Prioridad basada en el monitoreo", opciones_pri, placeholder="Todas", key="filtro_prioridad"
             )
         with f4:
             filtro_amenaza = st.multiselect(
@@ -2053,9 +2053,6 @@ with st.container(border=True):
             type="primary",
             width="stretch",
         )
-
-if sitrep_id == "SITREP_03_2026-11-18":
-    st.info("**SitRep 3 — borrador de trabajo.** Fecha de corte prevista: 18/11/2026. Las cifras y clasificaciones corresponden al documento preliminar y están sujetas a validación institucional.")
 
 filtrado = actual.copy()
 if filtro_sub:
@@ -2128,7 +2125,7 @@ with col_resumen:
         '<div class="legend-body">' + ''.join(filas_amenazas) + '</div>'
         '</div>'
         '<div class="legend-card priority-card">'
-        '<div class="legend-title">Nivel de prioridad según el monitoreo</div>'
+        '<div class="legend-title">Prioridad basada en el monitoreo</div>'
         '<div class="legend-body">' + ''.join(filas_prioridad) + '</div>'
         '</div>'
         '</div>',
@@ -2166,7 +2163,7 @@ altura_situacion = max(430, min(520, 20 * max(1, len(filtrado)) + 70))
 g1, g2 = st.columns([1.0, 1.45], gap="medium")
 with g1:
     with st.container(border=True):
-        st.markdown("**Prioridad del monitoreo por subregión**")
+        st.markdown("**Prioridad basada en el monitoreo por subregión**")
         st.plotly_chart(
             grafico_subregion(filtrado, altura=altura_situacion),
             use_container_width=True,
@@ -2216,7 +2213,7 @@ else:
     e1, e2 = st.columns([1, 1.18], gap="medium")
     with e1:
         with st.container(border=True):
-            st.markdown("**Países por nivel de prioridad según el monitoreo**")
+            st.markdown("**Países por prioridad basada en el monitoreo**")
             st.plotly_chart(
                 evolucion_prioridad(base, altura=altura_evolucion),
                 use_container_width=True,

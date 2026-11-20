@@ -459,7 +459,7 @@ def main(idioma="es"):
     ax_leg.add_patch(FancyBboxPatch((.045,.025),.910,.950,boxstyle="round,pad=.012,rounding_size=.035",transform=ax_leg.transAxes,facecolor="#F8FCFE",edgecolor=BORDE_PANEL,linewidth=1))
     # En dos renglones para mantener la etiqueta íntegra dentro del panel
     # y distinguir esta priorización de una clasificación de riesgo general.
-    ax_leg.text(.105,.948,"Priority level\nbased on monitoring" if idioma == "en" else "Nivel de prioridad\nsegún el monitoreo",fontsize=12.5,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes,va="top",linespacing=1.04)
+    ax_leg.text(.105,.948,"Priority based on\nmonitoring" if idioma == "en" else "Prioridad basada en\nel monitoreo",fontsize=12.5,fontweight="bold",color=AZUL_OPS,transform=ax_leg.transAxes,va="top",linespacing=1.04)
     prioridades=[
         ("#D71920", "High" if idioma == "en" else "Alta"),
         ("#FF8618", "Medium" if idioma == "en" else "Media"),
